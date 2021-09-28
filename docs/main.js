@@ -16,14 +16,19 @@ PDFJSAnnotate.setStoreAdapter(new PDFJSAnnotate.LocalStoreAdapter());
 PDFJS.workerSrc = './shared/pdf.worker.js';
 
 // Render stuff
-let NUM_PAGES = 0;
+var NUM_PAGES = 0;
+let renderedPages = {};
 document.getElementById('content-wrapper').addEventListener('scroll', function (e) {
-  let visiblePageNum = Math.round(e.target.scrollTop / PAGE_HEIGHT) + 1;
-  let visiblePage = document.querySelector(`.page[data-page-number="${visiblePageNum}"][data-loaded="false"]`);
+  var visiblePageNum = Math.round(e.target.scrollTop / PAGE_HEIGHT) + 1;
+  var visiblePage = document.querySelector('.page[data-page-number="' + visiblePageNum + '"][data-loaded="false"]');
   if (visiblePage) {
-    setTimeout(function () {
-      UI.renderPage(visiblePageNum, RENDER_OPTIONS);
-    });
+	// Prevent invoking UI.renderPage on the same page more than once
+	if (!renderedPages[visiblePageNum]) {
+	  renderedPages[visiblePageNum] = true;
+	  setTimeout(function () {
+		UI.renderPage(visiblePageNum, RENDER_OPTIONS);
+	  });
+	}
   }
 });
 
