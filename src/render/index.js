@@ -14,6 +14,8 @@ import renderScreenReaderHints from '../a11y/renderScreenReaderHints';
  *    - rejected: Error
  */
 export default function render(svg, viewport, data) {
+	console.log('svg: ', svg);
+
 	return new Promise((resolve, reject) => {
 		// Reset the content of the SVG
 		svg.innerHTML = '';

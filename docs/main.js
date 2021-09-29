@@ -5,14 +5,14 @@
 // index.js is the resulting compiled file, which I rename as 'pdf-annotate-index' for use in exams_SAT
 //
 // Structure:
-// 		div.pdf-container
-//			div.pdfViewer#viewer
+// 		div#contentWrapper       --> originally, position absolute and scroll element
+//			div.pdfViewer#viewer --> now, position absolute and scroll element
 //				div.page
 //					div.canvasWrapper
 //					svg.annotationLayer(1)
 //					div.textLayer
 //
-//	(1) pdfJS creates a div (see pdf_viewer.js) that then gets converted into an svg by pdfjs-annotate ??
+//	(1) pdfJS creates a div (see pdf_viewer.js). Does pdfjs-annotate change it to be just an svg element ??
 //
 //***********************************************
 
@@ -43,9 +43,9 @@ PDFJS.workerSrc = '../pdf-assets/shared/pdf.worker.js';
 // Render stuff
 let NUM_PAGES = 0;
 let renderedPages = {};
-document.getElementById('content-wrapper').addEventListener('scroll', function (e) {
-    var visiblePageNum = Math.round(e.target.scrollTop / PAGE_HEIGHT) + 1;
-    var visiblePage = document.querySelector('.page[data-page-number="' + visiblePageNum + '"][data-loaded="false"]');
+document.querySelector('.pdfViewer').addEventListener('scroll', function (e) {
+    let visiblePageNum = Math.round(e.target.scrollTop / PAGE_HEIGHT) + 1;
+    let visiblePage = document.querySelector('.page[data-page-number="' + visiblePageNum + '"][data-loaded="false"]');
     if (visiblePage) {
         // Prevent invoking UI.renderPage on the same page more than once
         if (!renderedPages[visiblePageNum]) {
