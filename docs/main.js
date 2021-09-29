@@ -3,6 +3,17 @@
 //***********************************************
 // This is the entry file for webpack
 // index.js is the resulting compiled file, which I rename as 'pdf-annotate-index' for use in exams_SAT
+//
+// Structure:
+// 		div.pdf-container
+//			div.pdfViewer#viewer
+//				div.page
+//					div.canvasWrapper
+//					svg.annotationLayer(1)
+//					div.textLayer
+//
+//	(1) pdfJS creates a div (see pdf_viewer.js) that then gets converted into an svg by pdfjs-annotate ??
+//
 //***********************************************
 
 
