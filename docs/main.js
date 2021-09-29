@@ -1,23 +1,36 @@
-import twitter from 'twitter-text';
+
+
+//***********************************************
+// This is the entry file for webpack
+// index.js is the resulting compiled file, which I rename as 'pdf-annotate-index' for use in exams_SAT
+//***********************************************
+
+
+/* import twitter from 'twitter-text'; */
 import PDFJSAnnotate from '../';
 import initColorPicker from './shared/initColorPicker';
 
 const { UI } = PDFJSAnnotate;
 
-const documentId = 'example.pdf';
+/* const documentId = 'example.pdf'; */
+const tempTitleElm = document.querySelector('.delete.exam-title');
+const documentId = tempTitleElm.textContent;
+/* tempTitleElm.remove(); */
+
 let PAGE_HEIGHT;
 let RENDER_OPTIONS = {
     documentId,
     pdfDocument: null,
-    scale: parseFloat(localStorage.getItem(`${documentId}/scale`), 10) || 1.33,
+    scale: parseFloat(localStorage.getItem(`${documentId}/scale`), 10) || 1.5,
     rotate: parseInt(localStorage.getItem(`${documentId}/rotate`), 10) || 0
 };
 
 PDFJSAnnotate.setStoreAdapter(new PDFJSAnnotate.LocalStoreAdapter());
-PDFJS.workerSrc = './shared/pdf.worker.js';
+/* PDFJS.workerSrc = './shared/pdf.worker.js'; */
+PDFJS.workerSrc = '../pdf-assets/shared/pdf.worker.js';
 
 // Render stuff
-var NUM_PAGES = 0;
+let NUM_PAGES = 0;
 let renderedPages = {};
 document.getElementById('content-wrapper').addEventListener('scroll', function (e) {
     var visiblePageNum = Math.round(e.target.scrollTop / PAGE_HEIGHT) + 1;
@@ -250,7 +263,7 @@ render();
 })();
 
 // Scale/rotate
-(function () {
+/* (function () {
     function setScaleRotate(scale, rotate) {
         scale = parseFloat(scale, 10);
         rotate = parseInt(rotate, 10);
@@ -282,7 +295,7 @@ render();
     document.querySelector('.toolbar select.scale').addEventListener('change', handleScaleChange);
     document.querySelector('.toolbar .rotate-ccw').addEventListener('click', handleRotateCCWClick);
     document.querySelector('.toolbar .rotate-cw').addEventListener('click', handleRotateCWClick);
-})();
+})(); */
 
 // Clear toolbar button
 (function () {
@@ -299,7 +312,7 @@ render();
 })();
 
 // Comment stuff
-(function (window, document) {
+/* (function (window, document) {
     let commentList = document.querySelector('#comment-wrapper .comment-list-container');
     let commentForm = document.querySelector('#comment-wrapper .comment-list-form');
     let commentText = commentForm.querySelector('input[type="text"]');
@@ -357,4 +370,4 @@ render();
 
     UI.addEventListener('annotation:click', handleAnnotationClick);
     UI.addEventListener('annotation:blur', handleAnnotationBlur);
-})(window, document);
+})(window, document); */
