@@ -1,6 +1,6 @@
 
 const path = require('path');
-const webpack = require('webpack');
+/* const webpack = require('webpack'); */
 
 module.exports = {
 	entry: './docs/main.js',
@@ -8,18 +8,6 @@ module.exports = {
 		filename: 'index.js',
 		path: path.resolve(__dirname, 'docs') // output directory
 	}
-
-   /*  module: {
-		loaders: [{
-				test: /\.js$/,
-				exclude: /node_modules/,
-				loader: 'babel-loader',
-				query: {
-					presets: ['es2015']
-				}
-			}
-		]
-	} */
 };
 
 

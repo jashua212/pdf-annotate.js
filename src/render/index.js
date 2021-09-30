@@ -1,6 +1,15 @@
+
+// this file must be a webpack thing -- i.e., this index.js file seems to be used as an aggregator for importing and then exporting all the exports from the other .js files in this 'render' submodule
+
+
+// this import seems to be unnecessary and circular, but this technique is employed in other modules, so I'll leave this in out of an abundance of caution (presumably webpack will know to handle this correctly)
 import PDFJSAnnotate from '../PDFJSAnnotate';
+
+// I am commenting out this import because it seems to be NOT used at all
+/* import renderScreenReaderHints from '../a11y/renderScreenReaderHints'; */
+
 import appendChild from './appendChild';
-import renderScreenReaderHints from '../a11y/renderScreenReaderHints';
+
 
 /**
  * Render the response from PDFJSAnnotate.getStoreAdapter().getAnnotations to SVG

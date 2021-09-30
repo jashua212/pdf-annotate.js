@@ -12,21 +12,26 @@
 //					svg.annotationLayer(1)
 //					div.textLayer
 //
-//	(1) pdfJS creates a div (see pdf_viewer.js). Does pdfjs-annotate change it to be just an svg element ??
+//	(1) pdfJS does create a div for the annotation layer (see pdf_viewer.js). But does pdfjs-annotate then change that layer to be just an svg element ?? Do I even need this div.annotation-layer created by pdfJS ??
 //
 //***********************************************
 
 
+// NOT using twitter for posting comments
 /* import twitter from 'twitter-text'; */
-import PDFJSAnnotate from '../';
-import initColorPicker from './shared/initColorPicker';
+
+// NOT using colorpicker
+/* import initColorPicker from './shared/initColorPicker'; */
+
+/* import PDFJSAnnotate from '../'; */
+// above is NOT as good as import PDFJSAnnotate from '../src/PDFJSAnnotate.js', which rebuilds its submodules and, thus, icorporates any changes made in them
+import PDFJSAnnotate from '../src/PDFJSAnnotate.js';
 
 const { UI } = PDFJSAnnotate;
+// above is same as const UI = PDFJSAnnotate.UI
 
-/* const documentId = 'example.pdf'; */
 const tempTitleElm = document.querySelector('.delete.exam-title');
 const documentId = tempTitleElm.textContent;
-/* tempTitleElm.remove(); */
 
 let PAGE_HEIGHT;
 let RENDER_OPTIONS = {
@@ -36,13 +41,21 @@ let RENDER_OPTIONS = {
     rotate: parseInt(localStorage.getItem(`${documentId}/rotate`), 10) || 0
 };
 
+// Use LocalStorageAdapter
 PDFJSAnnotate.setStoreAdapter(new PDFJSAnnotate.LocalStoreAdapter());
+
+// PDFJS's worker is that library's CORE module (not its DISPLAY or VIEWER module)
+// PDFJS's api (called pdfJS itself) is its DISPLAY module and gets loaded via a script tag on the html page
+// older versions of PDFJS have a separate VIEWER module which also gets loaded via a script tage on the html page
 /* PDFJS.workerSrc = './shared/pdf.worker.js'; */
-PDFJS.workerSrc = '../pdf-assets/shared/pdf.worker.js';
+/* PDFJS.workerSrc = '../pdf-assets/shared/pdf.worker.js'; */
+PDFJS.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/1.4.162/pdf.worker.min.js'
+
 
 // Render stuff
 let NUM_PAGES = 0;
 let renderedPages = {};
+
 document.querySelector('.pdfViewer').addEventListener('scroll', function (e) {
     let visiblePageNum = Math.round(e.target.scrollTop / PAGE_HEIGHT) + 1;
     let visiblePage = document.querySelector('.page[data-page-number="' + visiblePageNum + '"][data-loaded="false"]');
@@ -69,6 +82,8 @@ function render() {
             viewer.appendChild(page);
         }
 
+		// this libe adds this to pdfJS's standard 'render' function
+		// n.b.: this block adds annotation only to the 1st page
         UI.renderPage(1, RENDER_OPTIONS).then(([pdfPage, annotations]) => {
             let viewport = pdfPage.getViewport(RENDER_OPTIONS.scale, RENDER_OPTIONS.rotate);
             PAGE_HEIGHT = viewport.height;
@@ -92,9 +107,9 @@ render();
             localStorage.getItem(`${RENDER_OPTIONS.documentId}/text/size`) || 10,
             localStorage.getItem(`${RENDER_OPTIONS.documentId}/text/color`) || '#000000');
 
-        initColorPicker(document.querySelector('.text-color'), textColor, function (value) {
+        /* initColorPicker(document.querySelector('.text-color'), textColor, function (value) {
             setText(textSize, value);
-        });
+        }); */
     }
 
     function setText(size, color) {
@@ -155,9 +170,9 @@ render();
             localStorage.getItem(`${RENDER_OPTIONS.documentId}/pen/size`) || 1,
             localStorage.getItem(`${RENDER_OPTIONS.documentId}/pen/color`) || '#000000');
 
-        initColorPicker(document.querySelector('.pen-color'), penColor, function (value) {
+        /* initColorPicker(document.querySelector('.pen-color'), penColor, function (value) {
             setPen(penSize, value);
-        });
+        }); */
     }
 
     function setPen(size, color) {

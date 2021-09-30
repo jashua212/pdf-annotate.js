@@ -1,8 +1,14 @@
+
+// this appears to be the end aggregator import and export module for the PDFJSAnnotate library itself
+// this module, in turn, will get imported by 'docs/main.js' which then gets compiled by webpack into 'docs/index.js'
+
 import StoreAdapter from './adapter/StoreAdapter';
 import LocalStoreAdapter from './adapter/LocalStoreAdapter';
 import render from './render';
 import UI from './UI';
 
+
+// Exporting a POJO
 export default {
 	/**
 	 * Abstract class that needs to be defined so PDFJSAnnotate
