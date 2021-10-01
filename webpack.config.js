@@ -1,13 +1,26 @@
 
 const path = require('path');
-/* const webpack = require('webpack'); */
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
 	entry: './docs/main.js',
 	output: {
 		filename: 'index.js',
 		path: path.resolve(__dirname, 'docs') // output directory
-	}
+	},
+
+	// plugins NOT related to minification
+	plugins: [
+		// copy compiled 'index.js' file move it to exams_SAT repo
+		new CopyPlugin({
+			patterns: [
+				{
+					from: 'C:/Users/jashu/GitHub/instructure/pdf-annotate.js/docs/index.js',
+					to: 'C:/Users/jashu/GitHub/exams_SAT/src/pdf-assets/pdf-annotate-index.js'
+				}
+			]
+		}),
+	]
 };
 
 

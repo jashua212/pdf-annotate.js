@@ -8,7 +8,8 @@
     "start": "./scripts/web",
     "build": "MINIFY=1 webpack",
     "coveralls": "cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
-    "dev": "webpack --mode=none --watch"
+    "dev": "webpack --mode=none --watch",
+    "trans": "copy \"C:\\Users\\jashu\\GitHub\\instructure\\pdf-annotate.js\\docs\\index.js\" \"C:\\Users\\jashu\\GitHub\\exams_SAT\\src\\pdf-assets\\pdf-annotate-index.js\""
   },
   "files": [
     "dist"
@@ -29,6 +30,7 @@
   "homepage": "https://github.com/instructure/pdf-annotate.js#readme",
   "devDependencies": {
     "chai": "^3.5.0",
+    "copy-webpack-plugin": "^9.0.1",
     "coveralls": "^2.11.9",
     "istanbul-instrumenter-loader": "^0.2.0",
     "karma": "^0.13.22",
