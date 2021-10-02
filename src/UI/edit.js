@@ -165,7 +165,8 @@ function handleDocumentClick(e) {
 function handleDocumentKeyup(e) {
 	if (overlay && e.keyCode === 46 &&
 		e.target.nodeName.toLowerCase() !== 'textarea' &&
-		e.target.nodeName.toLowerCase() !== 'input') {
+		e.target.nodeName.toLowerCase() !== 'input'
+	) {
 		deleteAnnotation();
 	}
 }
@@ -262,7 +263,7 @@ function handleDocumentMouseup(e) {
 	}
 
 	PDFJSAnnotate.getStoreAdapter().getAnnotation(documentId, annotationId).then((annotation) => {
-		if (['area', 'highlight', 'point', 'textbox'].indexOf(type) > -1) {
+		if (/(area|highlight|point|textbox)/.test(type)) {
 			let {
 				deltaX,
 				deltaY
@@ -289,6 +290,7 @@ function handleDocumentMouseup(e) {
 						annotation.y = modelY;
 					}
 				}
+
 				if (deltaX !== 0) {
 					let modelX = parseInt(t.getAttribute('x'), 10) + deltaX;
 					let viewX = modelX;

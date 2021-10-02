@@ -41,12 +41,13 @@ function getSelectionRects() {
 
 /**
  * Handle document.mousedown event
+ * This creates a temporary div overlay
  *
  * @param {Event} e The DOM event to handle
  */
 function handleDocumentMousedown(e) {
 	let svg;
-	if (_type !== 'area' || !(svg = findSVGAtPoint(e.clientX, e.clientY))) {
+	if (!/^area/.test(_type) || !(svg = findSVGAtPoint(e.clientX, e.clientY))) {
 		return;
 	}
 
@@ -91,26 +92,36 @@ function handleDocumentMousemove(e) {
  */
 function handleDocumentMouseup(e) {
 	let rects;
-	if (_type !== 'area' && (rects = getSelectionRects())) {
+
+	if (!/^area/.test(_type) && (rects = getSelectionRects())) {
 		let svg = findSVGAtPoint(rects[0].left, rects[0].top);
-		saveRect(_type, [...rects].map((r) => {
+		saveRect(
+			_type,
+			[...rects].map((r) => {
 				return {
 					top: r.top,
 					left: r.left,
 					width: r.width,
 					height: r.height
 				};
-			}));
-	} else if (_type === 'area' && overlay) {
+			})
+		);
+
+	} else if (/^area/.test(_type) && overlay) {
 		let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 		let rect = svg.getBoundingClientRect();
-		saveRect(_type, [{
-					top: parseInt(overlay.style.top, 10) + rect.top,
-					left: parseInt(overlay.style.left, 10) + rect.left,
-					width: parseInt(overlay.style.width, 10),
-					height: parseInt(overlay.style.height, 10)
-				}
-			]);
+		let color = /blue/.test(_type) ? '#00f' : '#f00';
+
+		saveRect(
+			_type,
+			[{
+				top: parseInt(overlay.style.top, 10) + rect.top,
+				left: parseInt(overlay.style.left, 10) + rect.left,
+				width: parseInt(overlay.style.width, 10),
+				height: parseInt(overlay.style.height, 10)
+			}],
+			color
+		);
 
 		overlay.parentNode.removeChild(overlay);
 		overlay = null;
@@ -190,7 +201,7 @@ function saveRect(type, rects, color) {
 	}
 
 	// Special treatment for area as it only supports a single rect
-	if (type === 'area') {
+	if (/^area/.test(_type)) {
 		let rect = annotation.rectangles[0];
 		delete annotation.rectangles;
 		annotation.x = rect.x;
@@ -205,10 +216,9 @@ function saveRect(type, rects, color) {
 	} = getMetadata(svg);
 
 	// Add the annotation
-	PDFJSAnnotate.getStoreAdapter().addAnnotation(documentId, pageNumber, annotation)
-	.then((annotation) => {
-		appendChild(svg, annotation);
-	});
+	PDFJSAnnotate.getStoreAdapter()
+		.addAnnotation(documentId, pageNumber, annotation)
+		.then((annotation) => appendChild(svg, annotation));
 }
 
 /**

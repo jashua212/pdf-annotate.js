@@ -1671,8 +1671,9 @@ function appendChild(svg, annotation, viewport) {
 
 	let child;
 	switch (annotation.type) {
-	case 'area':
-	case 'highlight':
+	case 'area-red-border':
+	case 'area-blue-border':
+	/* case 'highlight': */
 		child = (0,_renderRect__WEBPACK_IMPORTED_MODULE_4__["default"])(annotation);
 		break;
 	/* case 'strikeout':
@@ -2334,7 +2335,8 @@ function handleDocumentClick(e) {
 function handleDocumentKeyup(e) {
 	if (overlay && e.keyCode === 46 &&
 		e.target.nodeName.toLowerCase() !== 'textarea' &&
-		e.target.nodeName.toLowerCase() !== 'input') {
+		e.target.nodeName.toLowerCase() !== 'input'
+	) {
 		deleteAnnotation();
 	}
 }
@@ -2431,7 +2433,7 @@ function handleDocumentMouseup(e) {
 	}
 
 	_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().getAnnotation(documentId, annotationId).then((annotation) => {
-		if (['area', 'highlight', 'point', 'textbox'].indexOf(type) > -1) {
+		if (/(area|highlight|point|textbox)/.test(type)) {
 			let {
 				deltaX,
 				deltaY
@@ -2458,6 +2460,7 @@ function handleDocumentMouseup(e) {
 						annotation.y = modelY;
 					}
 				}
+
 				if (deltaX !== 0) {
 					let modelX = parseInt(t.getAttribute('x'), 10) + deltaX;
 					let viewX = modelX;
@@ -2907,12 +2910,13 @@ function getSelectionRects() {
 
 /**
  * Handle document.mousedown event
+ * This creates a temporary div overlay
  *
  * @param {Event} e The DOM event to handle
  */
 function handleDocumentMousedown(e) {
 	let svg;
-	if (_type !== 'area' || !(svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(e.clientX, e.clientY))) {
+	if (!/^area/.test(_type) || !(svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(e.clientX, e.clientY))) {
 		return;
 	}
 
@@ -2957,26 +2961,36 @@ function handleDocumentMousemove(e) {
  */
 function handleDocumentMouseup(e) {
 	let rects;
-	if (_type !== 'area' && (rects = getSelectionRects())) {
+
+	if (!/^area/.test(_type) && (rects = getSelectionRects())) {
 		let svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(rects[0].left, rects[0].top);
-		saveRect(_type, [...rects].map((r) => {
+		saveRect(
+			_type,
+			[...rects].map((r) => {
 				return {
 					top: r.top,
 					left: r.left,
 					width: r.width,
 					height: r.height
 				};
-			}));
-	} else if (_type === 'area' && overlay) {
+			})
+		);
+
+	} else if (/^area/.test(_type) && overlay) {
 		let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 		let rect = svg.getBoundingClientRect();
-		saveRect(_type, [{
-					top: parseInt(overlay.style.top, 10) + rect.top,
-					left: parseInt(overlay.style.left, 10) + rect.left,
-					width: parseInt(overlay.style.width, 10),
-					height: parseInt(overlay.style.height, 10)
-				}
-			]);
+		let color = /blue/.test(_type) ? '#00f' : '#f00';
+
+		saveRect(
+			_type,
+			[{
+				top: parseInt(overlay.style.top, 10) + rect.top,
+				left: parseInt(overlay.style.left, 10) + rect.left,
+				width: parseInt(overlay.style.width, 10),
+				height: parseInt(overlay.style.height, 10)
+			}],
+			color
+		);
 
 		overlay.parentNode.removeChild(overlay);
 		overlay = null;
@@ -3056,7 +3070,7 @@ function saveRect(type, rects, color) {
 	}
 
 	// Special treatment for area as it only supports a single rect
-	if (type === 'area') {
+	if (/^area/.test(_type)) {
 		let rect = annotation.rectangles[0];
 		delete annotation.rectangles;
 		annotation.x = rect.x;
@@ -3071,10 +3085,9 @@ function saveRect(type, rects, color) {
 	} = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.getMetadata)(svg);
 
 	// Add the annotation
-	_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().addAnnotation(documentId, pageNumber, annotation)
-	.then((annotation) => {
-		(0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
-	});
+	_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter()
+		.addAnnotation(documentId, pageNumber, annotation)
+		.then((annotation) => (0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation));
 }
 
 /**
@@ -3774,10 +3787,9 @@ render();
 
 // Toolbar buttons
 (function () {
-	// always set initial tooltype as 'cursor'
+	// always set initial tooltype as 'cursor' -- DON'T store this in localStorage
 	/* let tooltype = localStorage.getItem(`${RENDER_OPTIONS.documentId}/tooltype`) || 'cursor'; */
 	let tooltype = 'cursor';
-
 	if (tooltype) {
 		setActiveToolbarItem(tooltype, document.querySelector(`.toolbar button[data-tooltype=${tooltype}]`));
 	}
@@ -3803,7 +3815,8 @@ render();
 			case 'point':
 				UI.disablePoint();
 				break;
-			case 'area':
+			case 'area-red-border':
+			case 'area-blue-border':
 			/* case 'highlight':
 			case 'strikeout': */
 				UI.disableRect();
@@ -3832,7 +3845,8 @@ render();
 		case 'point':
 			UI.enablePoint();
 			break;
-		case 'area':
+		case 'area-red-border':
+		case 'area-blue-border':
 		/* case 'highlight':
 		case 'strikeout': */
 			UI.enableRect(type);
@@ -4012,7 +4026,7 @@ render();
 // Clear toolbar button
 (function () {
 	function handleClearClick(e) {
-		if (confirm('Are you sure you want to clear annotations?')) {
+		if (confirm('\nAre you sure you want to clear ALL annotations?')) {
 			for (let i = 0; i < NUM_PAGES; i++) {
 				document.querySelector(`div#pageContainer${i+1} svg.annotationLayer`).innerHTML = '';
 			}

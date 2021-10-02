@@ -200,7 +200,8 @@ render();
 			case 'point':
 				UI.disablePoint();
 				break;
-			case 'area':
+			case 'area-red-border':
+			case 'area-blue-border':
 			/* case 'highlight':
 			case 'strikeout': */
 				UI.disableRect();
@@ -229,7 +230,8 @@ render();
 		case 'point':
 			UI.enablePoint();
 			break;
-		case 'area':
+		case 'area-red-border':
+		case 'area-blue-border':
 		/* case 'highlight':
 		case 'strikeout': */
 			UI.enableRect(type);
