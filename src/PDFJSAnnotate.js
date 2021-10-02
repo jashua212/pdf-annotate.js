@@ -76,4 +76,4 @@ export default {
 	getAnnotations(documentId, pageNumber) {
 		return this.getStoreAdapter().getAnnotations(...arguments);
 	}
-}
+};

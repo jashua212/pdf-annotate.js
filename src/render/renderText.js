@@ -9,15 +9,15 @@ import normalizeColor from '../utils/normalizeColor';
  * @return {SVGTextElement} A text to be rendered
  */
 export default function renderText(a) {
-  var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+	var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
 
-  setAttributes(text, {
-    x: a.x,
-    y: a.y + parseInt(a.size, 10),
-    fill: normalizeColor(a.color || '#000'),
-    fontSize: a.size
-  });
-  text.innerHTML = a.content;
+	setAttributes(text, {
+		x: a.x,
+		y: a.y + parseInt(a.size, 10),
+		fill: normalizeColor(a.color || '#000'),
+		fontSize: a.size
+	});
+	text.innerHTML = a.content;
 
-  return text;
+	return text;
 }

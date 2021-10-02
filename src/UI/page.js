@@ -16,7 +16,7 @@ const PAGE_TEMPLATE = `
 `;
 
 /**
- * Create a new page to be appended to the DOM.
+ * Create a new page element to be appended to the DOM.
  *
  * @param {Number} pageNumber The page number that is being created
  * @return {HTMLElement}
@@ -26,6 +26,7 @@ export function createPage(pageNumber) {
 	temp.innerHTML = PAGE_TEMPLATE;
 
 	let page = temp.children[0];
+	console.log('page: ', page);
 	let canvas = page.querySelector('canvas');
 
 	page.setAttribute('id', `pageContainer${pageNumber}`);
@@ -38,7 +39,7 @@ export function createPage(pageNumber) {
 }
 
 /**
- * Render a page that has already been created.
+ * Render a page element that has already been created.
  *
  * @param {Number} pageNumber The page number to be rendered
  * @param {Object} renderOptions The options for rendering
@@ -55,7 +56,7 @@ export function renderPage(pageNumber, renderOptions) {
 		rotate
 	} = renderOptions;
 
-	// Load the page and annotations
+	// Load the page and its annotations
 	return Promise.all([
 			pdfDocument.getPage(pageNumber),
 			PDFJSAnnotate.getAnnotations(documentId, pageNumber)
@@ -65,6 +66,9 @@ export function renderPage(pageNumber, renderOptions) {
 			let svg = page.querySelector('.annotationLayer');
 			let canvas = page.querySelector('.canvasWrapper canvas');
 			let canvasContext = canvas.getContext('2d', { alpha: false });
+
+			// the viewport dimensions are embedded in the pdfPage itself that is retrieved via pdfDocument.getPage(pageNumber)
+			// can I manipulate these dimensions before storing them in the 'viewport' variable ?? By adjusting the scale ??
 			let viewport = pdfPage.getViewport(scale, rotate);
 			let transform = scalePage(pageNumber, viewport, canvasContext);
 
@@ -77,8 +81,8 @@ export function renderPage(pageNumber, renderOptions) {
 					}),
 					PDFJSAnnotate.render(svg, viewport, annotations)
 				])
-				.then(() => {
-				/* 	// Text content is needed for a11y, but is also necessary for creating
+				/* .then(() => {
+					// Text content is needed for a11y, but is also necessary for creating
 					// highlight and strikeout annotations which require selecting text.
 					return pdfPage.getTextContent({
 							normalizeWhitespace: true
@@ -103,14 +107,14 @@ export function renderPage(pageNumber, renderOptions) {
 									}
 								});
 							});
-						}); */
-		})
-		.then(() => {
-			// Indicate that the page was loaded
-			page.setAttribute('data-loaded', 'true');
+						});
+				}) */
+				.then(() => {
+					// Indicate that the page was loaded
+					page.setAttribute('data-loaded', 'true');
 
-			return [pdfPage, annotations];
-		});
+					return [pdfPage, annotations];
+				});
 	});
 }
 
@@ -127,7 +131,7 @@ function scalePage(pageNumber, viewport, context) {
 	let canvas = page.querySelector('.canvasWrapper canvas');
 	let svg = page.querySelector('.annotationLayer');
 	let wrapper = page.querySelector('.canvasWrapper');
-	let textLayer = page.querySelector('.textLayer');
+	/* let textLayer = page.querySelector('.textLayer'); */
 	let outputScale = getOutputScale(context);
 	let transform = !outputScale.scaled ? null : [outputScale.sx, 0, 0, outputScale.sy, 0, 0];
 	let sfx = approximateFraction(outputScale.sx);
@@ -147,8 +151,8 @@ function scalePage(pageNumber, viewport, context) {
 	page.style.height = `${viewport.height}px`;
 	wrapper.style.width = `${viewport.width}px`;
 	wrapper.style.height = `${viewport.height}px`;
-	textLayer.style.width = `${viewport.width}px`;
-	textLayer.style.height = `${viewport.height}px`;
+	/* textLayer.style.width = `${viewport.width}px`;
+	textLayer.style.height = `${viewport.height}px`; */
 
 	return transform;
 }
