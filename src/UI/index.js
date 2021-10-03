@@ -5,46 +5,39 @@ import {
     addEventListener,
     removeEventListener,
     fireEvent
-}
-from './event';
+} from './event';
 
 import {
     disableEdit,
     enableEdit
-}
-from './edit';
+} from './edit';
 
 import {
     disablePen,
     enablePen,
     setPen
-}
-from './pen';
+} from './pen';
 
 import {
     disablePoint,
     enablePoint
-}
-from './point';
+} from './point';
 
 import {
     disableRect,
     enableRect
-}
-from './rect';
+} from './rect';
 
 import {
     disableText,
     enableText,
     setText
-}
-from './text';
+} from './text';
 
 import {
     createPage,
     renderPage
-}
-from './page';
+} from './page';
 
 export default {
     addEventListener,

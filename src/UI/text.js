@@ -5,8 +5,7 @@ import {
 	findSVGAtPoint,
 	getMetadata,
 	scaleDown
-}
-from './utils';
+} from './utils';
 
 let _enabled = false;
 let input;

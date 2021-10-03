@@ -3,8 +3,7 @@ import EventEmitter from 'events';
 import {
 	findAnnotationAtPoint,
 	findSVGAtPoint
-}
-from './utils';
+} from './utils';
 
 const emitter = new EventEmitter;
 

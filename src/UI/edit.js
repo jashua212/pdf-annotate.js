@@ -5,8 +5,7 @@ import appendChild from '../render/appendChild';
 import {
 	addEventListener,
 	removeEventListener
-}
-from './event';
+} from './event';
 
 import {
 	BORDER_COLOR,
@@ -18,8 +17,7 @@ import {
 	getMetadata,
 	scaleDown,
 	scaleUp
-}
-from './utils';
+} from './utils';
 
 let _enabled = false;
 let isDragging = false, overlay;

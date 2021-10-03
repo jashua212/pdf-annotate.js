@@ -9,6 +9,14 @@ module.exports = {
 		path: path.resolve(__dirname, 'docs') // output directory
 	},
 
+	// must ignore index.js when watching -- otherwise, webpack will compile in an infinite loop when index.js gets copied by the CopyPlugin
+	watchOptions: {
+		ignored: [
+			'**/node_modules',
+			'C:/Users/jashu/GitHub/instructure/pdf-annotate.js/docs/index.js'
+		]
+	},
+
 	// plugins NOT related to minification
 	plugins: [
 		// copy compiled 'index.js' file move it to exams_SAT repo
