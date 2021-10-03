@@ -1,5 +1,6 @@
 import PDFJSAnnotate from '../PDFJSAnnotate';
 import appendChild from '../render/appendChild';
+import { fireEvent } from './event';
 import {
 	BORDER_COLOR,
 	disableUserSelect,
@@ -9,14 +10,13 @@ import {
 	getOffset,
 	scaleDown,
 	scaleUp
-}
-from './utils';
+} from './utils';
 
 let _enabled = false;
 let _type;
 let overlay;
-let originY;
 let originX;
+let originY;
 
 /**
  * Get the current window selection as rects
@@ -34,63 +34,96 @@ function getSelectionRects() {
 			rects[0].height > 0) {
 			return rects;
 		}
-	} catch (e) {}
+	} catch (e) {
+		console.log('could NOT get selection\'s rects');
+	}
 
 	return null;
 }
 
 /**
- * Handle document.mousedown event
+ * Handle document.pointerdown event
  * This creates a temporary div overlay
  *
  * @param {Event} e The DOM event to handle
  */
-function handleDocumentMousedown(e) {
+function handleDocumentPointerdown(e) {
 	let svg;
 	if (!/^area/.test(_type) || !(svg = findSVGAtPoint(e.clientX, e.clientY))) {
 		return;
 	}
 
 	let rect = svg.getBoundingClientRect();
-	originY = e.clientY;
+
+	// e.clientX && e.clientY returns position in the viewport (as opposed to in the page)
 	originX = e.clientX;
+	originY = e.clientY;
+	console.log('origin e.clientX: ', e.clientX);
+	console.log('origin e.clientY: ', e.clientY);
 
 	overlay = document.createElement('div');
 	overlay.style.position = 'absolute';
-	overlay.style.top = `${originY - rect.top}px`;
 	overlay.style.left = `${originX - rect.left}px`;
+	overlay.style.top = `${originY - rect.top}px`;
 	overlay.style.border = `3px solid ${BORDER_COLOR}`;
 	overlay.style.borderRadius = '3px';
 	svg.parentNode.appendChild(overlay);
 
-	document.addEventListener('mousemove', handleDocumentMousemove);
+	document.addEventListener('pointermove', handleDocumentPointermove);
 	disableUserSelect();
 }
 
 /**
- * Handle document.mousemove event
+ * Handle document.pointermove event
  *
  * @param {Event} e The DOM event to handle
  */
-function handleDocumentMousemove(e) {
+function handleDocumentPointermove(e) {
 	let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 	let rect = svg.getBoundingClientRect();
 
-	if (originX + (e.clientX - originX) < rect.right) {
+	let deltaX = (e.clientX - originX);
+	let deltaY = (e.clientY - originY);
+	let absDeltaX = Math.abs(deltaX);
+	let absDeltaY = Math.abs(deltaY);
+	let maxAbsDeltaX = Math.abs(originX - rect.left);
+	let maxAbsDeltaY = Math.abs(originY - rect.top);
+
+	// commented out original formulation
+	/* if (originX + (e.clientX - originX) < rect.right) {
 		overlay.style.width = `${e.clientX - originX}px`;
 	}
-
 	if (originY + (e.clientY - originY) < rect.bottom) {
 		overlay.style.height = `${e.clientY - originY}px`;
+	} */
+
+	if (deltaX < 0) {
+		overlay.style.left = Math.max(5, e.clientX - rect.left) + 'px';
+		overlay.style.width = Math.min(
+			(maxAbsDeltaX - 5),
+			absDeltaX
+		) + 'px';
+	} else {
+		overlay.style.width = absDeltaX + 'px';
+	}
+
+	if (deltaY < 0) {
+		overlay.style.top = Math.max(5, e.clientY - rect.top) + 'px';
+		overlay.style.height = Math.min(
+			(maxAbsDeltaY - 5),
+			absDeltaY
+		) + 'px';
+	} else {
+		overlay.style.height = absDeltaY + 'px';
 	}
 }
 
 /**
- * Handle document.mouseup event
+ * Handle document.pointerup event
  *
  * @param {Event} e The DOM event to handle
  */
-function handleDocumentMouseup(e) {
+function handleDocumentPointerup(e) {
 	let rects;
 
 	if (!/^area/.test(_type) && (rects = getSelectionRects())) {
@@ -126,9 +159,11 @@ function handleDocumentMouseup(e) {
 		overlay.parentNode.removeChild(overlay);
 		overlay = null;
 
-		document.removeEventListener('mousemove', handleDocumentMousemove);
+		document.removeEventListener('pointermove', handleDocumentPointermove);
 		enableUserSelect();
 	}
+
+	fireEvent('resetToolbar');
 }
 
 /**
@@ -144,8 +179,10 @@ function handleDocumentKeyup(e) {
 		if (overlay && overlay.parentNode) {
 			overlay.parentNode.removeChild(overlay);
 			overlay = null;
-			document.removeEventListener('mousemove', handleDocumentMousemove);
+			document.removeEventListener('pointermove', handleDocumentPointermove);
 		}
+		enableUserSelect();
+		fireEvent('resetToolbar');
 	}
 }
 
@@ -232,8 +269,8 @@ export function enableRect(type) {
 	}
 
 	_enabled = true;
-	document.addEventListener('mouseup', handleDocumentMouseup);
-	document.addEventListener('mousedown', handleDocumentMousedown);
+	document.addEventListener('pointerup', handleDocumentPointerup);
+	document.addEventListener('pointerdown', handleDocumentPointerdown);
 	document.addEventListener('keyup', handleDocumentKeyup);
 }
 
@@ -246,7 +283,7 @@ export function disableRect() {
 	}
 
 	_enabled = false;
-	document.removeEventListener('mouseup', handleDocumentMouseup);
-	document.removeEventListener('mousedown', handleDocumentMousedown);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
+	document.removeEventListener('pointerdown', handleDocumentPointerdown);
 	document.removeEventListener('keyup', handleDocumentKeyup);
 }
