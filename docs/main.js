@@ -24,7 +24,8 @@
 /* import initColorPicker from './shared/initColorPicker'; */
 
 /* import PDFJSAnnotate from '../'; */
-// above is NOT as good as import PDFJSAnnotate from '../src/PDFJSAnnotate.js', which rebuilds its submodules and, thus, icorporates any changes made in them
+// above is NOT as good as import PDFJSAnnotate from '../src/PDFJSAnnotate.js', which rebuilds its submodules and, thus, incorporates any changes made in them
+// also, the below (instead of "import * from") seems to be importing all the exports as a 'namespace'
 import PDFJSAnnotate from '../src/PDFJSAnnotate.js';
 
 const { UI } = PDFJSAnnotate;
@@ -173,11 +174,16 @@ render();
 // Toolbar buttons
 (function () {
 	// always set initial tooltype as 'cursor' -- DON'T store this in localStorage
-	/* let tooltype = localStorage.getItem(`${RENDER_OPTIONS.documentId}/tooltype`) || 'cursor'; */
+	// am doing away with the button for 'cursor' since that is the default state and all toolbar actions will return to this default state when done (instead of sticking)
 	let tooltype = 'cursor';
+	setActiveToolbarItem(tooltype);
+
+	// orig formulation is below
+	/* let tooltype = 'cursor';
+	let tooltype = localStorage.getItem(`${RENDER_OPTIONS.documentId}/tooltype`) || 'cursor';
 	if (tooltype) {
 		setActiveToolbarItem(tooltype, document.querySelector(`.toolbar button[data-tooltype=${tooltype}]`));
-	}
+	} */
 
 	function setActiveToolbarItem(type, button) {
 		console.log('type passed as param: ', type);
@@ -191,15 +197,18 @@ render();
 			case 'cursor':
 				UI.disableEdit();
 				break;
-			case 'draw':
+			case 'draw-red-line':
+			case 'draw-blue-line':
+			case 'draw-red-freehand':
+			case 'draw-blue-freehand':
 				UI.disablePen();
 				break;
 			case 'text':
 				UI.disableText();
 				break;
-			case 'point':
+			/* case 'point':
 				UI.disablePoint();
-				break;
+				break; */
 			case 'area-red-border':
 			case 'area-blue-border':
 			/* case 'highlight':
@@ -215,21 +224,29 @@ render();
 		if (tooltype !== type) {
 			localStorage.setItem(`${RENDER_OPTIONS.documentId}/tooltype`, type);
 		}
+
+		// assign the passed in 'type' param to the global variable 'tooltype'
 		tooltype = type;
 
 		switch (type) {
 		case 'cursor':
 			UI.enableEdit();
 			break;
-		case 'draw':
-			UI.enablePen();
+			
+		// since NO LONGER using colorPicker and thicknessPicker for drawing, there is no need for setPen function (imported from UI.pen) anymore
+		// instead, pass in type as a parameter to UI.enablePen just like what we already do for UI.enableRect(type) below
+		case 'draw-red-line':
+		case 'draw-blue-line':
+		case 'draw-red-freehand':
+		case 'draw-blue-freehand':
+			UI.enablePen(type);
 			break;
 		case 'text':
 			UI.enableText();
 			break;
-		case 'point':
+		/* case 'point':
 			UI.enablePoint();
-			break;
+			break; */
 		case 'area-red-border':
 		case 'area-blue-border':
 		/* case 'highlight':
@@ -240,16 +257,22 @@ render();
 	}
 
 	function handleToolbarClick(e) {
-		if (e.target.nodeName === 'BUTTON') {
-			setActiveToolbarItem(e.target.getAttribute('data-tooltype'), e.target);
+		const target = e.target;
+		const tooltype = e.target.getAttribute('data-tooltype');
+		if (target.nodeName === 'BUTTON' && tooltype) {
+			setActiveToolbarItem(tooltype, target);
 		}
 	}
 
 	document.querySelector('.toolbar').addEventListener('click', handleToolbarClick);
+
+	UI.addEventListener('resetToolbar', (e) => {
+		setActiveToolbarItem('cursor');
+	});
 })();
 
-// Text stuff
-(function () {
+// Text size stuff
+/* (function () {
 	let textSize;
 	let textColor;
 
@@ -263,9 +286,9 @@ render();
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/text/size`) || 14,
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/text/color`) || '#000000');
 
-		/* initColorPicker(document.querySelector('.text-color'), textColor, function (value) {
+		initColorPicker(document.querySelector('.text-color'), textColor, function (value) {
 			setText(textSize, value);
-		}); */
+		});
 	}
 
 	function setText(size, color) {
@@ -309,10 +332,10 @@ render();
 	document.querySelector('.toolbar .text-size').addEventListener('change', handleTextSizeChange);
 
 	initText();
-})();
+})(); */
 
-// Pen stuff
-(function () {
+// Pen size stuff
+/* (function () {
 	let penSize;
 	let penColor;
 
@@ -326,9 +349,9 @@ render();
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/pen/size`) || 1,
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/pen/color`) || '#000000');
 
-		/* initColorPicker(document.querySelector('.pen-color'), penColor, function (value) {
+		initColorPicker(document.querySelector('.pen-color'), penColor, function (value) {
 			setPen(penSize, value);
-		}); */
+		});
 	}
 
 	function setPen(size, color) {
@@ -371,7 +394,7 @@ render();
 	document.querySelector('.toolbar .pen-size').addEventListener('change', handlePenSizeChange);
 
 	initPen();
-})();
+})(); */
 
 // Scale/rotate
 /* (function () {
@@ -422,7 +445,7 @@ render();
 	document.querySelector('.toolbar .clear').addEventListener('click', handleClearClick);
 })();
 
-// Comment stuff
+// Comment stuff -- triggered by 'point' button
 /* (function (window, document) {
 	let commentList = document.querySelector('#comment-wrapper .comment-list-container');
 	let commentForm = document.querySelector('#comment-wrapper .comment-list-form');

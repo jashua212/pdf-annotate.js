@@ -15,7 +15,7 @@ import {
 import {
     disablePen,
     enablePen,
-    setPen
+    /* setPen */
 } from './pen';
 
 import {
@@ -47,7 +47,7 @@ export default {
     enableEdit,
     disablePen,
     enablePen,
-    setPen,
+    /* setPen, */
     disablePoint,
     enablePoint,
     disableRect,

@@ -122,7 +122,9 @@ export function getAnnotationRect(el) {
 		w = 0,
 		x = 0,
 		y = 0;
+
 	let rect = el.getBoundingClientRect();
+
 	// TODO this should be calculated somehow
 	const LINE_OFFSET = 16;
 
@@ -185,10 +187,10 @@ export function getAnnotationRect(el) {
 		x = rect.left - offsetLeft;
 		y = rect.top - offsetTop;
 
-		if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
+		/* if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
 			h += LINE_OFFSET;
 			y -= (LINE_OFFSET / 2);
-		}
+		} */
 		break;
 
 	case 'rect':

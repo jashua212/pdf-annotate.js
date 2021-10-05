@@ -1039,7 +1039,9 @@ function getAnnotationRect(el) {
 		w = 0,
 		x = 0,
 		y = 0;
+
 	let rect = el.getBoundingClientRect();
+
 	// TODO this should be calculated somehow
 	const LINE_OFFSET = 16;
 
@@ -1102,10 +1104,10 @@ function getAnnotationRect(el) {
 		x = rect.left - offsetLeft;
 		y = rect.top - offsetTop;
 
-		if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
+		/* if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
 			h += LINE_OFFSET;
 			y -= (LINE_OFFSET / 2);
-		}
+		} */
 		break;
 
 	case 'rect':
@@ -1147,9 +1149,7 @@ function getAnnotationRect(el) {
  */
 function scaleUp(svg, rect) {
 	let result = {};
-	let {
-		viewport
-	} = getMetadata(svg);
+	let { viewport } = getMetadata(svg);
 
 	Object.keys(rect).forEach((key) => {
 		result[key] = rect[key] * viewport.scale;
@@ -1167,9 +1167,7 @@ function scaleUp(svg, rect) {
  */
 function scaleDown(svg, rect) {
 	let result = {};
-	let {
-		viewport
-	} = getMetadata(svg);
+	let { viewport } = getMetadata(svg);
 
 	Object.keys(rect).forEach((key) => {
 		result[key] = rect[key] / viewport.scale;
@@ -2156,7 +2154,7 @@ __webpack_require__.r(__webpack_exports__);
     enableEdit: _edit__WEBPACK_IMPORTED_MODULE_1__.enableEdit,
     disablePen: _pen__WEBPACK_IMPORTED_MODULE_2__.disablePen,
     enablePen: _pen__WEBPACK_IMPORTED_MODULE_2__.enablePen,
-    setPen: _pen__WEBPACK_IMPORTED_MODULE_2__.setPen,
+    /* setPen, */
     disablePoint: _point__WEBPACK_IMPORTED_MODULE_3__.disablePoint,
     enablePoint: _point__WEBPACK_IMPORTED_MODULE_3__.enablePoint,
     disableRect: _rect__WEBPACK_IMPORTED_MODULE_4__.disableRect,
@@ -2574,13 +2572,14 @@ function disableEdit() {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "setPen": () => (/* binding */ setPen),
 /* harmony export */   "enablePen": () => (/* binding */ enablePen),
 /* harmony export */   "disablePen": () => (/* binding */ disablePen)
 /* harmony export */ });
 /* harmony import */ var _PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(1);
 /* harmony import */ var _render_appendChild__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(11);
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(6);
+/* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(4);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(6);
+
 
 
 
@@ -2588,56 +2587,65 @@ __webpack_require__.r(__webpack_exports__);
 let _enabled = false;
 let _penSize;
 let _penColor;
+let _penMode;
 let path;
 let lines;
 
 /**
- * Handle document.mousedown event
+ * Handle document.pointerdown event
+ * UNLIKE 'rect.js' module, this does NOT create a temporary div overlay
  */
-function handleDocumentMousedown() {
-  path = null;
-  lines = [];
+function handleDocumentPointerdown() {
+	path = null;
+	lines = [];
 
-  document.addEventListener('mousemove', handleDocumentMousemove);
-  document.addEventListener('mouseup', handleDocumentMouseup);
+	document.addEventListener('pointermove', handleDocumentPointermove);
+	document.addEventListener('pointerup', handleDocumentPointerup);
+	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.disableUserSelect)();
 }
 
 /**
- * Handle document.mouseup event
+ * Handle document.pointermove event
  *
  * @param {Event} e The DOM event to be handled
  */
-function handleDocumentMouseup(e) {
-  let svg;
-  if (lines.length > 1 && (svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(e.clientX, e.clientY))) {
-    let { documentId, pageNumber } = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.getMetadata)(svg);
-
-    _PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().addAnnotation(documentId, pageNumber, {
-        type: 'drawing',
-        width: _penSize,
-        color: _penColor,
-        lines
-      }
-    ).then((annotation) => {
-      if (path) {
-        svg.removeChild(path);
-      }
-
-      (0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
-    });
-  }
-
-  document.removeEventListener('mousemove', handleDocumentMousemove);
-  document.removeEventListener('mouseup', handleDocumentMouseup);
+function handleDocumentPointermove(e) {
+	savePoint(e.clientX, e.clientY);
 }
 
 /**
- * Handle document.mousemove event
+ * Handle document.pointerup event
  *
  * @param {Event} e The DOM event to be handled
  */
-function handleDocumentMousemove(e) {
-  savePoint(e.clientX, e.clientY);
+function handleDocumentPointerup(e) {
+	let svg;
+	if (lines.length > 1 && (svg = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.findSVGAtPoint)(e.clientX, e.clientY))) {
+		let {
+			documentId,
+			pageNumber
+		} = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getMetadata)(svg);
+		console.log('lines: ', lines);
+
+		_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().addAnnotation(documentId, pageNumber, {
+			type: 'drawing',
+			width: _penSize,
+			color: _penColor,
+			lines
+		}).then((annotation) => {
+			if (path) {
+				svg.removeChild(path);
+			}
+
+			(0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
+		});
+	}
+
+	document.removeEventListener('pointermove', handleDocumentPointermove);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
+	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.enableUserSelect)();
+
+	(0,_event__WEBPACK_IMPORTED_MODULE_2__.fireEvent)('resetToolbar');
 }
 
 /**
@@ -2646,13 +2654,15 @@ function handleDocumentMousemove(e) {
  * @param {Event} e The DOM event to be handled
  */
 function handleDocumentKeyup(e) {
-  // Cancel rect if Esc is pressed
-  if (e.keyCode === 27) {
-    lines = null;
-    path.parentNode.removeChild(path);
-    document.removeEventListener('mousemove', handleDocumentMousemove);
-    document.removeEventListener('mouseup', handleDocumentMouseup);
-  }
+	// Cancel rect if Esc is pressed
+	if (e.keyCode === 27) {
+		lines = null;
+		path.parentNode.removeChild(path);
+		document.removeEventListener('pointermove', handleDocumentPointermove);
+		document.removeEventListener('pointerup', handleDocumentPointerup);
+		(0,_utils__WEBPACK_IMPORTED_MODULE_3__.enableUserSelect)();
+		(0,_event__WEBPACK_IMPORTED_MODULE_2__.fireEvent)('resetToolbar');
+	}
 }
 
 /**
@@ -2662,33 +2672,41 @@ function handleDocumentKeyup(e) {
  * @param {Number} y The y coordinate of the point
  */
 function savePoint(x, y) {
-  let svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(x, y);
-  if (!svg) {
-    return;
-  }
+	let svg = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.findSVGAtPoint)(x, y);
+	if (!svg) {
+		return;
+	}
 
-  let rect = svg.getBoundingClientRect();
-  let point = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.scaleDown)(svg, {
-    x: x - rect.left,
-    y: y - rect.top
-  });
+	let rect = svg.getBoundingClientRect();
+	let point = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleDown)(svg, {
+		x: x - rect.left,
+		y: y - rect.top
+	});
 
-  lines.push([point.x, point.y]);
+	if (!lines.length || lines.length === 0) {
+		lines.push([point.x, point.y]);
+	} else {
+		if (_penMode === 'line') {
+			lines[1] = [point.x, point.y];
+		} else {
+			lines.push([point.x, point.y]);
+		}
+	}
 
-  if (lines.length <= 1) {
-    return;
-  }
+	if (lines.length <= 1) {
+		return;
+	}
 
-  if (path) {
-    svg.removeChild(path);
-  }
+	if (path) {
+		svg.removeChild(path);
+	}
 
-  path = (0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, {
-    type: 'drawing',
-    color: _penColor,
-    width: _penSize,
-    lines
-  });
+	path = (0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, {
+		type: 'drawing',
+		color: _penColor,
+		width: _penSize,
+		lines
+	});
 }
 
 /**
@@ -2697,35 +2715,43 @@ function savePoint(x, y) {
  * @param {Number} penSize The size of the lines drawn by the pen
  * @param {String} penColor The color of the lines drawn by the pen
  */
-function setPen(penSize = 1, penColor = '000000') {
-  _penSize = parseInt(penSize, 10);
-  _penColor = penColor;
-}
+/* export function setPen(penSize = 1, penColor = '000000') {
+	_penSize = parseInt(penSize, 10);
+	_penColor = penColor;
+} */
 
 /**
  * Enable the pen behavior
  */
-function enablePen() {
-  if (_enabled) { return; }
+function enablePen(type) {
+	// I added this block b/c am no longer using setPen() function immed above
+	_penSize = 1;
+	_penColor = /blue/.test(type) ? '#00f' : '#f00';
+	_penMode = /freehand/.test(type) ? 'freehand' : 'line';
 
-  _enabled = true;
-  document.addEventListener('mousedown', handleDocumentMousedown);
-  document.addEventListener('keyup', handleDocumentKeyup);
-  (0,_utils__WEBPACK_IMPORTED_MODULE_2__.disableUserSelect)();
+	if (_enabled) {
+		return;
+	}
+
+	_enabled = true;
+	document.addEventListener('pointerdown', handleDocumentPointerdown);
+	document.addEventListener('keyup', handleDocumentKeyup);
+	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.disableUserSelect)();
 }
 
 /**
  * Disable the pen behavior
  */
 function disablePen() {
-  if (!_enabled) { return; }
+	if (!_enabled) {
+		return;
+	}
 
-  _enabled = false;
-  document.removeEventListener('mousedown', handleDocumentMousedown);
-  document.removeEventListener('keyup', handleDocumentKeyup);
-  (0,_utils__WEBPACK_IMPORTED_MODULE_2__.enableUserSelect)();
+	_enabled = false;
+	document.removeEventListener('pointerdown', handleDocumentPointerdown);
+	document.removeEventListener('keyup', handleDocumentKeyup);
+	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.enableUserSelect)();
 }
-
 
 
 /***/ }),
@@ -2876,16 +2902,20 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(1);
 /* harmony import */ var _render_appendChild__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(11);
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(6);
+/* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(4);
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(6);
+
 
 
 
 
 let _enabled = false;
 let _type;
+let _drawMode;
+let _borderColor;
 let overlay;
-let originY;
 let originX;
+let originY;
 
 /**
  * Get the current window selection as rects
@@ -2903,67 +2933,104 @@ function getSelectionRects() {
 			rects[0].height > 0) {
 			return rects;
 		}
-	} catch (e) {}
+	} catch (e) {
+		console.log('could NOT get selection\'s rects');
+	}
 
 	return null;
 }
 
 /**
- * Handle document.mousedown event
+ * Handle document.pointerdown event
  * This creates a temporary div overlay
+ * This does NOT apply to either 'highlight' or 'strikeout.' HOW then do those 2 types work ??
  *
  * @param {Event} e The DOM event to handle
  */
-function handleDocumentMousedown(e) {
+function handleDocumentPointerdown(e) {
 	let svg;
-	if (!/^area/.test(_type) || !(svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(e.clientX, e.clientY))) {
-		return;
+
+	if (_drawMode !== 'area' || !(svg = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.findSVGAtPoint)(e.clientX, e.clientY))) {
+		return; // bail
 	}
 
 	let rect = svg.getBoundingClientRect();
-	originY = e.clientY;
-	originX = e.clientX;
 
-	overlay = document.createElement('div');
+	// e.clientX && e.clientY returns position in the viewport (as opposed to in the page)
+	originX = e.clientX;
+	originY = e.clientY;
+	console.log('origin e.clientX: ', e.clientX);
+	console.log('origin e.clientY: ', e.clientY);
+
+	overlay = document.createElement('div'); // temporary div
 	overlay.style.position = 'absolute';
-	overlay.style.top = `${originY - rect.top}px`;
 	overlay.style.left = `${originX - rect.left}px`;
-	overlay.style.border = `3px solid ${_utils__WEBPACK_IMPORTED_MODULE_2__.BORDER_COLOR}`;
+	overlay.style.top = `${originY - rect.top}px`;
+	overlay.style.border = `3px solid ${_utils__WEBPACK_IMPORTED_MODULE_3__.BORDER_COLOR}`;
 	overlay.style.borderRadius = '3px';
 	svg.parentNode.appendChild(overlay);
 
-	document.addEventListener('mousemove', handleDocumentMousemove);
-	(0,_utils__WEBPACK_IMPORTED_MODULE_2__.disableUserSelect)();
+	// so pointermove method, as well, does NOT apply to either 'highlight' or 'strikeout'
+	document.addEventListener('pointermove', handleDocumentPointermove);
+	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.disableUserSelect)();
 }
 
 /**
- * Handle document.mousemove event
+ * Handle document.pointermove event
+ * This does NOT apply to either 'highlight' or 'strikeout.' HOW then do those 2 types work ??
  *
  * @param {Event} e The DOM event to handle
  */
-function handleDocumentMousemove(e) {
+function handleDocumentPointermove(e) {
 	let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 	let rect = svg.getBoundingClientRect();
 
-	if (originX + (e.clientX - originX) < rect.right) {
+	let deltaX = (e.clientX - originX);
+	let deltaY = (e.clientY - originY);
+	let absDeltaX = Math.abs(deltaX);
+	let absDeltaY = Math.abs(deltaY);
+	let maxAbsDeltaX = Math.abs(originX - rect.left);
+	let maxAbsDeltaY = Math.abs(originY - rect.top);
+
+	// commented out original formulation
+	/* if (originX + (e.clientX - originX) < rect.right) {
 		overlay.style.width = `${e.clientX - originX}px`;
 	}
-
 	if (originY + (e.clientY - originY) < rect.bottom) {
 		overlay.style.height = `${e.clientY - originY}px`;
+	} */
+
+	if (deltaX < 0) {
+		overlay.style.left = Math.max(5, e.clientX - rect.left) + 'px';
+		overlay.style.width = Math.min(
+			(maxAbsDeltaX - 5),
+			absDeltaX
+		) + 'px';
+	} else {
+		overlay.style.width = absDeltaX + 'px';
+	}
+
+	if (deltaY < 0) {
+		overlay.style.top = Math.max(5, e.clientY - rect.top) + 'px';
+		overlay.style.height = Math.min(
+			(maxAbsDeltaY - 5),
+			absDeltaY
+		) + 'px';
+	} else {
+		overlay.style.height = absDeltaY + 'px';
 	}
 }
 
 /**
- * Handle document.mouseup event
+ * Handle document.pointerup event
  *
  * @param {Event} e The DOM event to handle
  */
-function handleDocumentMouseup(e) {
+function handleDocumentPointerup(e) {
 	let rects;
 
-	if (!/^area/.test(_type) && (rects = getSelectionRects())) {
-		let svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(rects[0].left, rects[0].top);
+	if (_drawMode !== 'area' && (rects = getSelectionRects())) {
+		let svg = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.findSVGAtPoint)(rects[0].left, rects[0].top);
 		saveRect(
 			_type,
 			[...rects].map((r) => {
@@ -2976,10 +3043,10 @@ function handleDocumentMouseup(e) {
 			})
 		);
 
-	} else if (/^area/.test(_type) && overlay) {
+	} else if (_drawMode === 'area' && overlay) {
 		let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 		let rect = svg.getBoundingClientRect();
-		let color = /blue/.test(_type) ? '#00f' : '#f00';
+		let color = _borderColor;
 
 		saveRect(
 			_type,
@@ -2995,9 +3062,11 @@ function handleDocumentMouseup(e) {
 		overlay.parentNode.removeChild(overlay);
 		overlay = null;
 
-		document.removeEventListener('mousemove', handleDocumentMousemove);
-		(0,_utils__WEBPACK_IMPORTED_MODULE_2__.enableUserSelect)();
+		document.removeEventListener('pointermove', handleDocumentPointermove);
+		(0,_utils__WEBPACK_IMPORTED_MODULE_3__.enableUserSelect)();
 	}
+
+	(0,_event__WEBPACK_IMPORTED_MODULE_2__.fireEvent)('resetToolbar');
 }
 
 /**
@@ -3013,8 +3082,10 @@ function handleDocumentKeyup(e) {
 		if (overlay && overlay.parentNode) {
 			overlay.parentNode.removeChild(overlay);
 			overlay = null;
-			document.removeEventListener('mousemove', handleDocumentMousemove);
+			document.removeEventListener('pointermove', handleDocumentPointermove);
 		}
+		(0,_utils__WEBPACK_IMPORTED_MODULE_3__.enableUserSelect)();
+		(0,_event__WEBPACK_IMPORTED_MODULE_2__.fireEvent)('resetToolbar');
 	}
 }
 
@@ -3026,7 +3097,7 @@ function handleDocumentKeyup(e) {
  * @param {String} color The color of the rects
  */
 function saveRect(type, rects, color) {
-	let svg = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.findSVGAtPoint)(rects[0].left, rects[0].top);
+	let svg = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.findSVGAtPoint)(rects[0].left, rects[0].top);
 	let node;
 	let annotation;
 
@@ -3036,7 +3107,7 @@ function saveRect(type, rects, color) {
 
 	let boundingRect = svg.getBoundingClientRect();
 
-	if (!color) {
+	if (_drawMode !== 'area' && !color) {
 		if (type === 'highlight') {
 			color = 'FFFF00';
 		} else if (type === 'strikeout') {
@@ -3055,7 +3126,7 @@ function saveRect(type, rects, color) {
 				offset = r.height / 2;
 			}
 
-			return (0,_utils__WEBPACK_IMPORTED_MODULE_2__.scaleDown)(svg, {
+			return (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleDown)(svg, {
 				y: (r.top + offset) - boundingRect.top,
 				x: r.left - boundingRect.left,
 				width: r.width,
@@ -3070,7 +3141,7 @@ function saveRect(type, rects, color) {
 	}
 
 	// Special treatment for area as it only supports a single rect
-	if (/^area/.test(_type)) {
+	if (_drawMode === 'area') {
 		let rect = annotation.rectangles[0];
 		delete annotation.rectangles;
 		annotation.x = rect.x;
@@ -3082,7 +3153,7 @@ function saveRect(type, rects, color) {
 	let {
 		documentId,
 		pageNumber
-	} = (0,_utils__WEBPACK_IMPORTED_MODULE_2__.getMetadata)(svg);
+	} = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getMetadata)(svg);
 
 	// Add the annotation
 	_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter()
@@ -3095,14 +3166,16 @@ function saveRect(type, rects, color) {
  */
 function enableRect(type) {
 	_type = type;
+	_drawMode = /^area/.test(type) ? 'area' : 'highlight-strikeout';
+	_borderColor = /blue/.test(type) ? 'blue' : 'red';
 
 	if (_enabled) {
 		return;
 	}
 
 	_enabled = true;
-	document.addEventListener('mouseup', handleDocumentMouseup);
-	document.addEventListener('mousedown', handleDocumentMousedown);
+	document.addEventListener('pointerup', handleDocumentPointerup);
+	document.addEventListener('pointerdown', handleDocumentPointerdown);
 	document.addEventListener('keyup', handleDocumentKeyup);
 }
 
@@ -3115,8 +3188,8 @@ function disableRect() {
 	}
 
 	_enabled = false;
-	document.removeEventListener('mouseup', handleDocumentMouseup);
-	document.removeEventListener('mousedown', handleDocumentMousedown);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
+	document.removeEventListener('pointerdown', handleDocumentPointerdown);
 	document.removeEventListener('keyup', handleDocumentKeyup);
 }
 
@@ -3639,7 +3712,8 @@ __webpack_require__.r(__webpack_exports__);
 /* import initColorPicker from './shared/initColorPicker'; */
 
 /* import PDFJSAnnotate from '../'; */
-// above is NOT as good as import PDFJSAnnotate from '../src/PDFJSAnnotate.js', which rebuilds its submodules and, thus, icorporates any changes made in them
+// above is NOT as good as import PDFJSAnnotate from '../src/PDFJSAnnotate.js', which rebuilds its submodules and, thus, incorporates any changes made in them
+// also, the below (instead of "import * from") seems to be importing all the exports as a 'namespace'
 
 
 const { UI } = _src_PDFJSAnnotate_js__WEBPACK_IMPORTED_MODULE_0__["default"];
@@ -3788,11 +3862,16 @@ render();
 // Toolbar buttons
 (function () {
 	// always set initial tooltype as 'cursor' -- DON'T store this in localStorage
-	/* let tooltype = localStorage.getItem(`${RENDER_OPTIONS.documentId}/tooltype`) || 'cursor'; */
+	// am doing away with the button for 'cursor' since that is the default state and all toolbar actions will return to this default state when done (instead of sticking)
 	let tooltype = 'cursor';
+	setActiveToolbarItem(tooltype);
+
+	// orig formulation is below
+	/* let tooltype = 'cursor';
+	let tooltype = localStorage.getItem(`${RENDER_OPTIONS.documentId}/tooltype`) || 'cursor';
 	if (tooltype) {
 		setActiveToolbarItem(tooltype, document.querySelector(`.toolbar button[data-tooltype=${tooltype}]`));
-	}
+	} */
 
 	function setActiveToolbarItem(type, button) {
 		console.log('type passed as param: ', type);
@@ -3806,15 +3885,18 @@ render();
 			case 'cursor':
 				UI.disableEdit();
 				break;
-			case 'draw':
+			case 'draw-red-line':
+			case 'draw-blue-line':
+			case 'draw-red-freehand':
+			case 'draw-blue-freehand':
 				UI.disablePen();
 				break;
 			case 'text':
 				UI.disableText();
 				break;
-			case 'point':
+			/* case 'point':
 				UI.disablePoint();
-				break;
+				break; */
 			case 'area-red-border':
 			case 'area-blue-border':
 			/* case 'highlight':
@@ -3830,21 +3912,29 @@ render();
 		if (tooltype !== type) {
 			localStorage.setItem(`${RENDER_OPTIONS.documentId}/tooltype`, type);
 		}
+
+		// assign the passed in 'type' param to the global variable 'tooltype'
 		tooltype = type;
 
 		switch (type) {
 		case 'cursor':
 			UI.enableEdit();
 			break;
-		case 'draw':
-			UI.enablePen();
+			
+		// since NO LONGER using colorPicker and thicknessPicker for drawing, there is no need for setPen function (imported from UI.pen) anymore
+		// instead, pass in type as a parameter to UI.enablePen just like what we already do for UI.enableRect(type) below
+		case 'draw-red-line':
+		case 'draw-blue-line':
+		case 'draw-red-freehand':
+		case 'draw-blue-freehand':
+			UI.enablePen(type);
 			break;
 		case 'text':
 			UI.enableText();
 			break;
-		case 'point':
+		/* case 'point':
 			UI.enablePoint();
-			break;
+			break; */
 		case 'area-red-border':
 		case 'area-blue-border':
 		/* case 'highlight':
@@ -3855,16 +3945,22 @@ render();
 	}
 
 	function handleToolbarClick(e) {
-		if (e.target.nodeName === 'BUTTON') {
-			setActiveToolbarItem(e.target.getAttribute('data-tooltype'), e.target);
+		const target = e.target;
+		const tooltype = e.target.getAttribute('data-tooltype');
+		if (target.nodeName === 'BUTTON' && tooltype) {
+			setActiveToolbarItem(tooltype, target);
 		}
 	}
 
 	document.querySelector('.toolbar').addEventListener('click', handleToolbarClick);
+
+	UI.addEventListener('resetToolbar', (e) => {
+		setActiveToolbarItem('cursor');
+	});
 })();
 
-// Text stuff
-(function () {
+// Text size stuff
+/* (function () {
 	let textSize;
 	let textColor;
 
@@ -3878,9 +3974,9 @@ render();
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/text/size`) || 14,
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/text/color`) || '#000000');
 
-		/* initColorPicker(document.querySelector('.text-color'), textColor, function (value) {
+		initColorPicker(document.querySelector('.text-color'), textColor, function (value) {
 			setText(textSize, value);
-		}); */
+		});
 	}
 
 	function setText(size, color) {
@@ -3924,10 +4020,10 @@ render();
 	document.querySelector('.toolbar .text-size').addEventListener('change', handleTextSizeChange);
 
 	initText();
-})();
+})(); */
 
-// Pen stuff
-(function () {
+// Pen size stuff
+/* (function () {
 	let penSize;
 	let penColor;
 
@@ -3941,9 +4037,9 @@ render();
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/pen/size`) || 1,
 			localStorage.getItem(`${RENDER_OPTIONS.documentId}/pen/color`) || '#000000');
 
-		/* initColorPicker(document.querySelector('.pen-color'), penColor, function (value) {
+		initColorPicker(document.querySelector('.pen-color'), penColor, function (value) {
 			setPen(penSize, value);
-		}); */
+		});
 	}
 
 	function setPen(size, color) {
@@ -3986,7 +4082,7 @@ render();
 	document.querySelector('.toolbar .pen-size').addEventListener('change', handlePenSizeChange);
 
 	initPen();
-})();
+})(); */
 
 // Scale/rotate
 /* (function () {
@@ -4037,7 +4133,7 @@ render();
 	document.querySelector('.toolbar .clear').addEventListener('click', handleClearClick);
 })();
 
-// Comment stuff
+// Comment stuff -- triggered by 'point' button
 /* (function (window, document) {
 	let commentList = document.querySelector('#comment-wrapper .comment-list-container');
 	let commentForm = document.querySelector('#comment-wrapper .comment-list-form');

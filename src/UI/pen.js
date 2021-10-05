@@ -1,66 +1,76 @@
 import PDFJSAnnotate from '../PDFJSAnnotate';
 import appendChild from '../render/appendChild';
+import { fireEvent } from './event';
 import {
-  disableUserSelect,
-  enableUserSelect,
-  findSVGAtPoint,
-  getMetadata,
-  scaleDown
+	disableUserSelect,
+	enableUserSelect,
+	findSVGAtPoint,
+	getMetadata,
+	scaleDown
 } from './utils';
 
 let _enabled = false;
 let _penSize;
 let _penColor;
+let _penMode;
 let path;
 let lines;
 
 /**
- * Handle document.mousedown event
+ * Handle document.pointerdown event
+ * UNLIKE 'rect.js' module, this does NOT create a temporary div overlay
  */
-function handleDocumentMousedown() {
-  path = null;
-  lines = [];
+function handleDocumentPointerdown() {
+	path = null;
+	lines = [];
 
-  document.addEventListener('mousemove', handleDocumentMousemove);
-  document.addEventListener('mouseup', handleDocumentMouseup);
+	document.addEventListener('pointermove', handleDocumentPointermove);
+	document.addEventListener('pointerup', handleDocumentPointerup);
+	disableUserSelect();
 }
 
 /**
- * Handle document.mouseup event
+ * Handle document.pointermove event
  *
  * @param {Event} e The DOM event to be handled
  */
-function handleDocumentMouseup(e) {
-  let svg;
-  if (lines.length > 1 && (svg = findSVGAtPoint(e.clientX, e.clientY))) {
-    let { documentId, pageNumber } = getMetadata(svg);
-
-    PDFJSAnnotate.getStoreAdapter().addAnnotation(documentId, pageNumber, {
-        type: 'drawing',
-        width: _penSize,
-        color: _penColor,
-        lines
-      }
-    ).then((annotation) => {
-      if (path) {
-        svg.removeChild(path);
-      }
-
-      appendChild(svg, annotation);
-    });
-  }
-
-  document.removeEventListener('mousemove', handleDocumentMousemove);
-  document.removeEventListener('mouseup', handleDocumentMouseup);
+function handleDocumentPointermove(e) {
+	savePoint(e.clientX, e.clientY);
 }
 
 /**
- * Handle document.mousemove event
+ * Handle document.pointerup event
  *
  * @param {Event} e The DOM event to be handled
  */
-function handleDocumentMousemove(e) {
-  savePoint(e.clientX, e.clientY);
+function handleDocumentPointerup(e) {
+	let svg;
+	if (lines.length > 1 && (svg = findSVGAtPoint(e.clientX, e.clientY))) {
+		let {
+			documentId,
+			pageNumber
+		} = getMetadata(svg);
+		console.log('lines: ', lines);
+
+		PDFJSAnnotate.getStoreAdapter().addAnnotation(documentId, pageNumber, {
+			type: 'drawing',
+			width: _penSize,
+			color: _penColor,
+			lines
+		}).then((annotation) => {
+			if (path) {
+				svg.removeChild(path);
+			}
+
+			appendChild(svg, annotation);
+		});
+	}
+
+	document.removeEventListener('pointermove', handleDocumentPointermove);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
+	enableUserSelect();
+
+	fireEvent('resetToolbar');
 }
 
 /**
@@ -69,13 +79,15 @@ function handleDocumentMousemove(e) {
  * @param {Event} e The DOM event to be handled
  */
 function handleDocumentKeyup(e) {
-  // Cancel rect if Esc is pressed
-  if (e.keyCode === 27) {
-    lines = null;
-    path.parentNode.removeChild(path);
-    document.removeEventListener('mousemove', handleDocumentMousemove);
-    document.removeEventListener('mouseup', handleDocumentMouseup);
-  }
+	// Cancel rect if Esc is pressed
+	if (e.keyCode === 27) {
+		lines = null;
+		path.parentNode.removeChild(path);
+		document.removeEventListener('pointermove', handleDocumentPointermove);
+		document.removeEventListener('pointerup', handleDocumentPointerup);
+		enableUserSelect();
+		fireEvent('resetToolbar');
+	}
 }
 
 /**
@@ -85,33 +97,41 @@ function handleDocumentKeyup(e) {
  * @param {Number} y The y coordinate of the point
  */
 function savePoint(x, y) {
-  let svg = findSVGAtPoint(x, y);
-  if (!svg) {
-    return;
-  }
+	let svg = findSVGAtPoint(x, y);
+	if (!svg) {
+		return;
+	}
 
-  let rect = svg.getBoundingClientRect();
-  let point = scaleDown(svg, {
-    x: x - rect.left,
-    y: y - rect.top
-  });
+	let rect = svg.getBoundingClientRect();
+	let point = scaleDown(svg, {
+		x: x - rect.left,
+		y: y - rect.top
+	});
 
-  lines.push([point.x, point.y]);
+	if (!lines.length || lines.length === 0) {
+		lines.push([point.x, point.y]);
+	} else {
+		if (_penMode === 'line') {
+			lines[1] = [point.x, point.y];
+		} else {
+			lines.push([point.x, point.y]);
+		}
+	}
 
-  if (lines.length <= 1) {
-    return;
-  }
+	if (lines.length <= 1) {
+		return;
+	}
 
-  if (path) {
-    svg.removeChild(path);
-  }
+	if (path) {
+		svg.removeChild(path);
+	}
 
-  path = appendChild(svg, {
-    type: 'drawing',
-    color: _penColor,
-    width: _penSize,
-    lines
-  });
+	path = appendChild(svg, {
+		type: 'drawing',
+		color: _penColor,
+		width: _penSize,
+		lines
+	});
 }
 
 /**
@@ -120,32 +140,40 @@ function savePoint(x, y) {
  * @param {Number} penSize The size of the lines drawn by the pen
  * @param {String} penColor The color of the lines drawn by the pen
  */
-export function setPen(penSize = 1, penColor = '000000') {
-  _penSize = parseInt(penSize, 10);
-  _penColor = penColor;
-}
+/* export function setPen(penSize = 1, penColor = '000000') {
+	_penSize = parseInt(penSize, 10);
+	_penColor = penColor;
+} */
 
 /**
  * Enable the pen behavior
  */
-export function enablePen() {
-  if (_enabled) { return; }
+export function enablePen(type) {
+	// I added this block b/c am no longer using setPen() function immed above
+	_penSize = 1;
+	_penColor = /blue/.test(type) ? '#00f' : '#f00';
+	_penMode = /freehand/.test(type) ? 'freehand' : 'line';
 
-  _enabled = true;
-  document.addEventListener('mousedown', handleDocumentMousedown);
-  document.addEventListener('keyup', handleDocumentKeyup);
-  disableUserSelect();
+	if (_enabled) {
+		return;
+	}
+
+	_enabled = true;
+	document.addEventListener('pointerdown', handleDocumentPointerdown);
+	document.addEventListener('keyup', handleDocumentKeyup);
+	disableUserSelect();
 }
 
 /**
  * Disable the pen behavior
  */
 export function disablePen() {
-  if (!_enabled) { return; }
+	if (!_enabled) {
+		return;
+	}
 
-  _enabled = false;
-  document.removeEventListener('mousedown', handleDocumentMousedown);
-  document.removeEventListener('keyup', handleDocumentKeyup);
-  enableUserSelect();
+	_enabled = false;
+	document.removeEventListener('pointerdown', handleDocumentPointerdown);
+	document.removeEventListener('keyup', handleDocumentKeyup);
+	enableUserSelect();
 }
-

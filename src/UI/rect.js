@@ -14,6 +14,8 @@ import {
 
 let _enabled = false;
 let _type;
+let _drawMode;
+let _borderColor;
 let overlay;
 let originX;
 let originY;
@@ -44,13 +46,15 @@ function getSelectionRects() {
 /**
  * Handle document.pointerdown event
  * This creates a temporary div overlay
+ * This does NOT apply to either 'highlight' or 'strikeout.' HOW then do those 2 types work ??
  *
  * @param {Event} e The DOM event to handle
  */
 function handleDocumentPointerdown(e) {
 	let svg;
-	if (!/^area/.test(_type) || !(svg = findSVGAtPoint(e.clientX, e.clientY))) {
-		return;
+
+	if (_drawMode !== 'area' || !(svg = findSVGAtPoint(e.clientX, e.clientY))) {
+		return; // bail
 	}
 
 	let rect = svg.getBoundingClientRect();
@@ -61,7 +65,7 @@ function handleDocumentPointerdown(e) {
 	console.log('origin e.clientX: ', e.clientX);
 	console.log('origin e.clientY: ', e.clientY);
 
-	overlay = document.createElement('div');
+	overlay = document.createElement('div'); // temporary div
 	overlay.style.position = 'absolute';
 	overlay.style.left = `${originX - rect.left}px`;
 	overlay.style.top = `${originY - rect.top}px`;
@@ -69,12 +73,14 @@ function handleDocumentPointerdown(e) {
 	overlay.style.borderRadius = '3px';
 	svg.parentNode.appendChild(overlay);
 
+	// so pointermove method, as well, does NOT apply to either 'highlight' or 'strikeout'
 	document.addEventListener('pointermove', handleDocumentPointermove);
 	disableUserSelect();
 }
 
 /**
  * Handle document.pointermove event
+ * This does NOT apply to either 'highlight' or 'strikeout.' HOW then do those 2 types work ??
  *
  * @param {Event} e The DOM event to handle
  */
@@ -126,7 +132,7 @@ function handleDocumentPointermove(e) {
 function handleDocumentPointerup(e) {
 	let rects;
 
-	if (!/^area/.test(_type) && (rects = getSelectionRects())) {
+	if (_drawMode !== 'area' && (rects = getSelectionRects())) {
 		let svg = findSVGAtPoint(rects[0].left, rects[0].top);
 		saveRect(
 			_type,
@@ -140,10 +146,10 @@ function handleDocumentPointerup(e) {
 			})
 		);
 
-	} else if (/^area/.test(_type) && overlay) {
+	} else if (_drawMode === 'area' && overlay) {
 		let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 		let rect = svg.getBoundingClientRect();
-		let color = /blue/.test(_type) ? '#00f' : '#f00';
+		let color = _borderColor;
 
 		saveRect(
 			_type,
@@ -204,7 +210,7 @@ function saveRect(type, rects, color) {
 
 	let boundingRect = svg.getBoundingClientRect();
 
-	if (!color) {
+	if (_drawMode !== 'area' && !color) {
 		if (type === 'highlight') {
 			color = 'FFFF00';
 		} else if (type === 'strikeout') {
@@ -238,7 +244,7 @@ function saveRect(type, rects, color) {
 	}
 
 	// Special treatment for area as it only supports a single rect
-	if (/^area/.test(_type)) {
+	if (_drawMode === 'area') {
 		let rect = annotation.rectangles[0];
 		delete annotation.rectangles;
 		annotation.x = rect.x;
@@ -263,6 +269,8 @@ function saveRect(type, rects, color) {
  */
 export function enableRect(type) {
 	_type = type;
+	_drawMode = /^area/.test(type) ? 'area' : 'highlight-strikeout';
+	_borderColor = /blue/.test(type) ? 'blue' : 'red';
 
 	if (_enabled) {
 		return;
