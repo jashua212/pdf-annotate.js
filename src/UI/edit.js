@@ -71,24 +71,24 @@ function createEditOverlay(target) {
 	parentNode.appendChild(overlay);
 	document.addEventListener('click', handleDocumentClick);
 	document.addEventListener('keyup', handleDocumentKeyup);
-	document.addEventListener('mousedown', handleDocumentMousedown);
+	document.addEventListener('pointerdown', handleDocumentPointerdown);
 	anchor.addEventListener('click', deleteAnnotation);
-	anchor.addEventListener('mouseover', () => {
+	anchor.addEventListener('pointerover', () => {
 		anchor.style.color = '#35A4DC';
 		anchor.style.borderColor = '#999';
 		anchor.style.boxShadow = '0 1px 1px #ccc';
 	});
-	anchor.addEventListener('mouseout', () => {
+	anchor.addEventListener('pointerout', () => {
 		anchor.style.color = '#bbb';
 		anchor.style.borderColor = '#bbb';
 		anchor.style.boxShadow = '';
 	});
-	overlay.addEventListener('mouseover', () => {
+	overlay.addEventListener('pointerover', () => {
 		if (!isDragging) {
 			anchor.style.display = '';
 		}
 	});
-	overlay.addEventListener('mouseout', () => {
+	overlay.addEventListener('pointerout', () => {
 		anchor.style.display = 'none';
 	});
 }
@@ -104,9 +104,9 @@ function destroyEditOverlay() {
 
 	document.removeEventListener('click', handleDocumentClick);
 	document.removeEventListener('keyup', handleDocumentKeyup);
-	document.removeEventListener('mousedown', handleDocumentMousedown);
-	document.removeEventListener('mousemove', handleDocumentMousemove);
-	document.removeEventListener('mouseup', handleDocumentMouseup);
+	document.removeEventListener('pointerdown', handleDocumentPointerdown);
+	document.removeEventListener('pointermove', handleDocumentPointermove);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
 	enableUserSelect();
 }
 
@@ -170,11 +170,11 @@ function handleDocumentKeyup(e) {
 }
 
 /**
- * Handle document.mousedown event
+ * Handle document.pointerdown event
  *
  * @param {Event} e The DOM event that needs to be handled
  */
-function handleDocumentMousedown(e) {
+function handleDocumentPointerdown(e) {
 	if (e.target !== overlay) {
 		return;
 	}
@@ -199,17 +199,17 @@ function handleDocumentMousedown(e) {
 	overlay.style.cursor = 'move';
 	overlay.querySelector('a').style.display = 'none';
 
-	document.addEventListener('mousemove', handleDocumentMousemove);
-	document.addEventListener('mouseup', handleDocumentMouseup);
+	document.addEventListener('pointermove', handleDocumentPointermove);
+	document.addEventListener('pointerup', handleDocumentPointerup);
 	disableUserSelect();
 }
 
 /**
- * Handle document.mousemove event
+ * Handle document.pointermove event
  *
  * @param {Event} e The DOM event that needs to be handled
  */
-function handleDocumentMousemove(e) {
+function handleDocumentPointermove(e) {
 	let annotationId = overlay.getAttribute('data-target-id');
 	let parentNode = overlay.parentNode;
 	let rect = parentNode.getBoundingClientRect();
@@ -230,11 +230,11 @@ function handleDocumentMousemove(e) {
 }
 
 /**
- * Handle document.mouseup event
+ * Handle document.pointerup event
  *
  * @param {Event} e The DOM event that needs to be handled
  */
-function handleDocumentMouseup(e) {
+function handleDocumentPointerup(e) {
 	let annotationId = overlay.getAttribute('data-target-id');
 	let target = document.querySelectorAll(`[data-pdf-annotate-id="${annotationId}"]`);
 	let type = target[0].getAttribute('data-pdf-annotate-type');
@@ -354,8 +354,8 @@ function handleDocumentMouseup(e) {
 	overlay.style.background = '';
 	overlay.style.cursor = '';
 
-	document.removeEventListener('mousemove', handleDocumentMousemove);
-	document.removeEventListener('mouseup', handleDocumentMouseup);
+	document.removeEventListener('pointermove', handleDocumentPointermove);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
 	enableUserSelect();
 }
 

@@ -46,7 +46,6 @@ export function findSVGAtPoint(x, y) {
 		let rect = el.getBoundingClientRect();
 
 		if (pointIntersectsRect(x, y, rect)) {
-
 			return el;
 		}
 	}
@@ -62,16 +61,28 @@ export function findSVGAtPoint(x, y) {
  * @return {Element} The annotation element or null if one can't be found
  */
 export function findAnnotationAtPoint(x, y) {
+	// First, find the parent svg container
 	let svg = findSVGAtPoint(x, y);
 	if (!svg) {
-		return;
+		return; // bail
 	}
-	let elements = svg.querySelectorAll('[data-pdf-annotate-type]');
 
-	// Find a target element within SVG
+	// Second, get a list of all the child svgs within that parent svg container
+	let elements = Array.from(svg.querySelectorAll('[data-pdf-annotate-type]'));
+	console.log('elements: ', elements);
+
+	// Third, loop thru these child svgs to find the 1st one whose extrapolated 4-sided rect contains (i.e., 'intersets') the clicked point (x, y)
 	for (let i = 0, l = elements.length; i < l; i++) {
 		let el = elements[i];
-		if (pointIntersectsRect(x, y, getOffsetAnnotationRect(el))) {
+
+		let rect = getOffsetAnnotationRect(el);
+		/* console.log('point x, y: ', x, y);
+		console.log('rect.left: ', rect.left);
+		console.log('rect.right: ', rect.right);
+		console.log('rect.top: ', rect.top);
+		console.log('rect.bottom: ', rect.bottom); */
+
+		if (pointIntersectsRect(x, y, rect)) {
 			return el;
 		}
 	}
@@ -92,17 +103,19 @@ export function pointIntersectsRect(x, y, rect) {
 }
 
 /**
- * Get the rect of an annotation element accounting for offset.
+ * Get the rect of an annotation element accounting for parent svg's offset.
  *
  * @param {Element} el The element to get the rect of
  * @return {Object} The dimensions of the element
  */
 export function getOffsetAnnotationRect(el) {
 	let rect = getAnnotationRect(el);
+
 	let {
 		offsetLeft,
 		offsetTop
 	} = getOffset(el);
+
 	return {
 		top: rect.top + offsetTop,
 		left: rect.left + offsetLeft,
@@ -125,11 +138,13 @@ export function getAnnotationRect(el) {
 
 	let rect = el.getBoundingClientRect();
 
-	// TODO this should be calculated somehow
-	const LINE_OFFSET = 16;
+	// TODO these should be calculated somehow
+	// These 2 constants come into play when dealing with a zero height or zero width svg element
+	const LINE_HEIGHT_ADJUSTED = 16;
+	const LINE_WIDTH_ADJUSTED = 8;
 
 	switch (el.nodeName.toLowerCase()) {
-	case 'path':
+	case 'path': // applicable to freehand pen draws
 		let minX,
 			maxX,
 			minY,
@@ -158,15 +173,26 @@ export function getAnnotationRect(el) {
 		y = minY;
 		break;
 
-	case 'line':
-		h = parseInt(el.getAttribute('y2'), 10) - parseInt(el.getAttribute('y1'), 10);
-		w = parseInt(el.getAttribute('x2'), 10) - parseInt(el.getAttribute('x1'), 10);
-		x = parseInt(el.getAttribute('x1'), 10);
-		y = parseInt(el.getAttribute('y1'), 10);
+	// I revamped this block so that it also covers all possible straight lines, NOT just the ones that are horizontal
+	case 'line': // applicable to straight lines
+		const _x1 = parseInt(el.getAttribute('x1'), 10);
+		const _y1 = parseInt(el.getAttribute('y1'), 10);
+		const _x2 = parseInt(el.getAttribute('x2'), 10);
+		const _y2 = parseInt(el.getAttribute('y2'), 10);
+
+		y = Math.min(_y1, _y2);
+		x = Math.min(_x1, _x2);
+		h = Math.abs(_y1 - _y2);
+		w = Math.abs(_x1 - _x2);
+		console.log('x y w h: ', x, y, w, h);
 
 		if (h === 0) {
-			h += LINE_OFFSET;
-			y -= (LINE_OFFSET / 2);
+			h += LINE_HEIGHT_ADJUSTED;
+			y -= (LINE_HEIGHT_ADJUSTED / 2);
+		}
+		if (w === 0) {
+			w += LINE_WIDTH_ADJUSTED;
+			x -= (LINE_WIDTH_ADJUSTED / 2);
 		}
 		break;
 
@@ -182,18 +208,19 @@ export function getAnnotationRect(el) {
 			offsetLeft,
 			offsetTop
 		} = getOffset(el);
+
 		h = rect.height;
 		w = rect.width;
 		x = rect.left - offsetLeft;
 		y = rect.top - offsetTop;
 
-		/* if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
+		if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
 			h += LINE_OFFSET;
 			y -= (LINE_OFFSET / 2);
-		} */
+		}
 		break;
 
-	case 'rect':
+	case 'rect': // applicable to red and blue rectangles
 	case 'svg':
 		h = parseInt(el.getAttribute('height'), 10);
 		w = parseInt(el.getAttribute('width'), 10);
@@ -269,6 +296,7 @@ export function getScroll(el) {
 	let scrollTop = 0;
 	let scrollLeft = 0;
 	let parentNode = el;
+
 	while ((parentNode = parentNode.parentNode) &&
 		parentNode !== document) {
 		scrollTop += parentNode.scrollTop;
@@ -288,19 +316,20 @@ export function getScroll(el) {
  * @return {Object} The offsetTop and offsetLeft position
  */
 export function getOffset(el) {
-	let parentNode = el;
-	while ((parentNode = parentNode.parentNode) &&
+	let parentNode = el.closest('svg.annotationLayer');
+
+	/* while ((parentNode = parentNode.parentNode) &&
 		parentNode !== document) {
 		if (parentNode.nodeName.toUpperCase() === 'SVG') {
 			break;
 		}
-	}
+	} */
 
 	let rect = parentNode.getBoundingClientRect();
 
 	return {
-		offsetLeft: rect.left,
-		offsetTop: rect.top
+		offsetLeft: Math.max(0, rect.left),
+		offsetTop: Math.max(0, rect.top)
 	};
 }
 

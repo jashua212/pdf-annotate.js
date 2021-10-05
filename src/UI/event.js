@@ -1,8 +1,8 @@
 import EventEmitter from 'events';
 
 import {
-	findAnnotationAtPoint,
-	findSVGAtPoint
+	findSVGAtPoint,
+	findAnnotationAtPoint
 } from './utils';
 
 const emitter = new EventEmitter;
@@ -15,10 +15,7 @@ let clickNode;
  * @param {Event} e The DOM event to be handled
  */
 document.addEventListener('click', function handleDocumentClick(e) {
-	if (!findSVGAtPoint(e.clientX, e.clientY)) {
-		return;
-	}
-
+	// Find the applicable svg child element (if any) -- i.e., NOT the parent svg container, but rather the actual svg child element for this annotation
 	let target = findAnnotationAtPoint(e.clientX, e.clientY);
 
 	// Emit annotation:blur if clickNode is no longer clicked
@@ -34,21 +31,21 @@ document.addEventListener('click', function handleDocumentClick(e) {
 	clickNode = target;
 });
 
-// let mouseOverNode;
-/* document.addEventListener('mousemove', function handleDocumentMousemove(e) {
+// let pointerOverNode;
+/* document.addEventListener('pointermove', function handleDocumentPointermove(e) {
 	let target = findAnnotationAtPoint(e.clientX, e.clientY);
 
-	// Emit annotation:mouseout if target was mouseout'd
-	if (mouseOverNode && !target) {
-		emitter.emit('annotation:mouseout', mouseOverNode);
+	// Emit annotation:pointerout if target was pointerout'd
+	if (pointerOverNode && !target) {
+		emitter.emit('annotation:pointerout', pointerOverNode);
 	}
 
-	// Emit annotation:mouseover if target was mouseover'd
-	if (target && mouseOverNode !== target) {
-		emitter.emit('annotation:mouseover', target);
+	// Emit annotation:pointerover if target was pointerover'd
+	if (target && pointerOverNode !== target) {
+		emitter.emit('annotation:pointerover', target);
 	}
 
-	mouseOverNode = target;
+	pointerOverNode = target;
 }); */
 
 export function fireEvent() {

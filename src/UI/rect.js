@@ -85,6 +85,7 @@ function handleDocumentPointerdown(e) {
  * @param {Event} e The DOM event to handle
  */
 function handleDocumentPointermove(e) {
+	// overlay.closest does NOT work -- WHY ??
 	let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 	let rect = svg.getBoundingClientRect();
 

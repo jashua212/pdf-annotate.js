@@ -340,10 +340,7 @@ let clickNode;
  * @param {Event} e The DOM event to be handled
  */
 document.addEventListener('click', function handleDocumentClick(e) {
-	if (!(0,_utils__WEBPACK_IMPORTED_MODULE_1__.findSVGAtPoint)(e.clientX, e.clientY)) {
-		return;
-	}
-
+	// Find the applicable svg child element (if any) -- i.e., NOT the parent svg container, but rather the actual svg child element for this annotation
 	let target = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.findAnnotationAtPoint)(e.clientX, e.clientY);
 
 	// Emit annotation:blur if clickNode is no longer clicked
@@ -359,21 +356,21 @@ document.addEventListener('click', function handleDocumentClick(e) {
 	clickNode = target;
 });
 
-// let mouseOverNode;
-/* document.addEventListener('mousemove', function handleDocumentMousemove(e) {
+// let pointerOverNode;
+/* document.addEventListener('pointermove', function handleDocumentPointermove(e) {
 	let target = findAnnotationAtPoint(e.clientX, e.clientY);
 
-	// Emit annotation:mouseout if target was mouseout'd
-	if (mouseOverNode && !target) {
-		emitter.emit('annotation:mouseout', mouseOverNode);
+	// Emit annotation:pointerout if target was pointerout'd
+	if (pointerOverNode && !target) {
+		emitter.emit('annotation:pointerout', pointerOverNode);
 	}
 
-	// Emit annotation:mouseover if target was mouseover'd
-	if (target && mouseOverNode !== target) {
-		emitter.emit('annotation:mouseover', target);
+	// Emit annotation:pointerover if target was pointerover'd
+	if (target && pointerOverNode !== target) {
+		emitter.emit('annotation:pointerover', target);
 	}
 
-	mouseOverNode = target;
+	pointerOverNode = target;
 }); */
 
 function fireEvent() {
@@ -963,7 +960,6 @@ function findSVGAtPoint(x, y) {
 		let rect = el.getBoundingClientRect();
 
 		if (pointIntersectsRect(x, y, rect)) {
-
 			return el;
 		}
 	}
@@ -979,16 +975,28 @@ function findSVGAtPoint(x, y) {
  * @return {Element} The annotation element or null if one can't be found
  */
 function findAnnotationAtPoint(x, y) {
+	// First, find the parent svg container
 	let svg = findSVGAtPoint(x, y);
 	if (!svg) {
-		return;
+		return; // bail
 	}
-	let elements = svg.querySelectorAll('[data-pdf-annotate-type]');
 
-	// Find a target element within SVG
+	// Second, get a list of all the child svgs within that parent svg container
+	let elements = Array.from(svg.querySelectorAll('[data-pdf-annotate-type]'));
+	console.log('elements: ', elements);
+
+	// Third, loop thru these child svgs to find the 1st one whose extrapolated 4-sided rect contains (i.e., 'intersets') the clicked point (x, y)
 	for (let i = 0, l = elements.length; i < l; i++) {
 		let el = elements[i];
-		if (pointIntersectsRect(x, y, getOffsetAnnotationRect(el))) {
+
+		let rect = getOffsetAnnotationRect(el);
+		/* console.log('point x, y: ', x, y);
+		console.log('rect.left: ', rect.left);
+		console.log('rect.right: ', rect.right);
+		console.log('rect.top: ', rect.top);
+		console.log('rect.bottom: ', rect.bottom); */
+
+		if (pointIntersectsRect(x, y, rect)) {
 			return el;
 		}
 	}
@@ -1009,17 +1017,19 @@ function pointIntersectsRect(x, y, rect) {
 }
 
 /**
- * Get the rect of an annotation element accounting for offset.
+ * Get the rect of an annotation element accounting for parent svg's offset.
  *
  * @param {Element} el The element to get the rect of
  * @return {Object} The dimensions of the element
  */
 function getOffsetAnnotationRect(el) {
 	let rect = getAnnotationRect(el);
+
 	let {
 		offsetLeft,
 		offsetTop
 	} = getOffset(el);
+
 	return {
 		top: rect.top + offsetTop,
 		left: rect.left + offsetLeft,
@@ -1042,11 +1052,13 @@ function getAnnotationRect(el) {
 
 	let rect = el.getBoundingClientRect();
 
-	// TODO this should be calculated somehow
-	const LINE_OFFSET = 16;
+	// TODO these should be calculated somehow
+	// These 2 constants come into play when dealing with a zero height or zero width svg element
+	const LINE_HEIGHT_ADJUSTED = 16;
+	const LINE_WIDTH_ADJUSTED = 8;
 
 	switch (el.nodeName.toLowerCase()) {
-	case 'path':
+	case 'path': // applicable to freehand pen draws
 		let minX,
 			maxX,
 			minY,
@@ -1075,15 +1087,26 @@ function getAnnotationRect(el) {
 		y = minY;
 		break;
 
-	case 'line':
-		h = parseInt(el.getAttribute('y2'), 10) - parseInt(el.getAttribute('y1'), 10);
-		w = parseInt(el.getAttribute('x2'), 10) - parseInt(el.getAttribute('x1'), 10);
-		x = parseInt(el.getAttribute('x1'), 10);
-		y = parseInt(el.getAttribute('y1'), 10);
+	// I revamped this block so that it also covers all possible straight lines, NOT just the ones that are horizontal
+	case 'line': // applicable to straight lines
+		const _x1 = parseInt(el.getAttribute('x1'), 10);
+		const _y1 = parseInt(el.getAttribute('y1'), 10);
+		const _x2 = parseInt(el.getAttribute('x2'), 10);
+		const _y2 = parseInt(el.getAttribute('y2'), 10);
+
+		y = Math.min(_y1, _y2);
+		x = Math.min(_x1, _x2);
+		h = Math.abs(_y1 - _y2);
+		w = Math.abs(_x1 - _x2);
+		console.log('x y w h: ', x, y, w, h);
 
 		if (h === 0) {
-			h += LINE_OFFSET;
-			y -= (LINE_OFFSET / 2);
+			h += LINE_HEIGHT_ADJUSTED;
+			y -= (LINE_HEIGHT_ADJUSTED / 2);
+		}
+		if (w === 0) {
+			w += LINE_WIDTH_ADJUSTED;
+			x -= (LINE_WIDTH_ADJUSTED / 2);
 		}
 		break;
 
@@ -1099,18 +1122,19 @@ function getAnnotationRect(el) {
 			offsetLeft,
 			offsetTop
 		} = getOffset(el);
+
 		h = rect.height;
 		w = rect.width;
 		x = rect.left - offsetLeft;
 		y = rect.top - offsetTop;
 
-		/* if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
+		if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
 			h += LINE_OFFSET;
 			y -= (LINE_OFFSET / 2);
-		} */
+		}
 		break;
 
-	case 'rect':
+	case 'rect': // applicable to red and blue rectangles
 	case 'svg':
 		h = parseInt(el.getAttribute('height'), 10);
 		w = parseInt(el.getAttribute('width'), 10);
@@ -1186,6 +1210,7 @@ function getScroll(el) {
 	let scrollTop = 0;
 	let scrollLeft = 0;
 	let parentNode = el;
+
 	while ((parentNode = parentNode.parentNode) &&
 		parentNode !== document) {
 		scrollTop += parentNode.scrollTop;
@@ -1205,19 +1230,20 @@ function getScroll(el) {
  * @return {Object} The offsetTop and offsetLeft position
  */
 function getOffset(el) {
-	let parentNode = el;
-	while ((parentNode = parentNode.parentNode) &&
+	let parentNode = el.closest('svg.annotationLayer');
+
+	/* while ((parentNode = parentNode.parentNode) &&
 		parentNode !== document) {
 		if (parentNode.nodeName.toUpperCase() === 'SVG') {
 			break;
 		}
-	}
+	} */
 
 	let rect = parentNode.getBoundingClientRect();
 
 	return {
-		offsetLeft: rect.left,
-		offsetTop: rect.top
+		offsetLeft: Math.max(0, rect.left),
+		offsetTop: Math.max(0, rect.top)
 	};
 }
 
@@ -2267,24 +2293,24 @@ function createEditOverlay(target) {
 	parentNode.appendChild(overlay);
 	document.addEventListener('click', handleDocumentClick);
 	document.addEventListener('keyup', handleDocumentKeyup);
-	document.addEventListener('mousedown', handleDocumentMousedown);
+	document.addEventListener('pointerdown', handleDocumentPointerdown);
 	anchor.addEventListener('click', deleteAnnotation);
-	anchor.addEventListener('mouseover', () => {
+	anchor.addEventListener('pointerover', () => {
 		anchor.style.color = '#35A4DC';
 		anchor.style.borderColor = '#999';
 		anchor.style.boxShadow = '0 1px 1px #ccc';
 	});
-	anchor.addEventListener('mouseout', () => {
+	anchor.addEventListener('pointerout', () => {
 		anchor.style.color = '#bbb';
 		anchor.style.borderColor = '#bbb';
 		anchor.style.boxShadow = '';
 	});
-	overlay.addEventListener('mouseover', () => {
+	overlay.addEventListener('pointerover', () => {
 		if (!isDragging) {
 			anchor.style.display = '';
 		}
 	});
-	overlay.addEventListener('mouseout', () => {
+	overlay.addEventListener('pointerout', () => {
 		anchor.style.display = 'none';
 	});
 }
@@ -2300,9 +2326,9 @@ function destroyEditOverlay() {
 
 	document.removeEventListener('click', handleDocumentClick);
 	document.removeEventListener('keyup', handleDocumentKeyup);
-	document.removeEventListener('mousedown', handleDocumentMousedown);
-	document.removeEventListener('mousemove', handleDocumentMousemove);
-	document.removeEventListener('mouseup', handleDocumentMouseup);
+	document.removeEventListener('pointerdown', handleDocumentPointerdown);
+	document.removeEventListener('pointermove', handleDocumentPointermove);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
 	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.enableUserSelect)();
 }
 
@@ -2366,11 +2392,11 @@ function handleDocumentKeyup(e) {
 }
 
 /**
- * Handle document.mousedown event
+ * Handle document.pointerdown event
  *
  * @param {Event} e The DOM event that needs to be handled
  */
-function handleDocumentMousedown(e) {
+function handleDocumentPointerdown(e) {
 	if (e.target !== overlay) {
 		return;
 	}
@@ -2395,17 +2421,17 @@ function handleDocumentMousedown(e) {
 	overlay.style.cursor = 'move';
 	overlay.querySelector('a').style.display = 'none';
 
-	document.addEventListener('mousemove', handleDocumentMousemove);
-	document.addEventListener('mouseup', handleDocumentMouseup);
+	document.addEventListener('pointermove', handleDocumentPointermove);
+	document.addEventListener('pointerup', handleDocumentPointerup);
 	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.disableUserSelect)();
 }
 
 /**
- * Handle document.mousemove event
+ * Handle document.pointermove event
  *
  * @param {Event} e The DOM event that needs to be handled
  */
-function handleDocumentMousemove(e) {
+function handleDocumentPointermove(e) {
 	let annotationId = overlay.getAttribute('data-target-id');
 	let parentNode = overlay.parentNode;
 	let rect = parentNode.getBoundingClientRect();
@@ -2426,11 +2452,11 @@ function handleDocumentMousemove(e) {
 }
 
 /**
- * Handle document.mouseup event
+ * Handle document.pointerup event
  *
  * @param {Event} e The DOM event that needs to be handled
  */
-function handleDocumentMouseup(e) {
+function handleDocumentPointerup(e) {
 	let annotationId = overlay.getAttribute('data-target-id');
 	let target = document.querySelectorAll(`[data-pdf-annotate-id="${annotationId}"]`);
 	let type = target[0].getAttribute('data-pdf-annotate-type');
@@ -2550,8 +2576,8 @@ function handleDocumentMouseup(e) {
 	overlay.style.background = '';
 	overlay.style.cursor = '';
 
-	document.removeEventListener('mousemove', handleDocumentMousemove);
-	document.removeEventListener('mouseup', handleDocumentMouseup);
+	document.removeEventListener('pointermove', handleDocumentPointermove);
+	document.removeEventListener('pointerup', handleDocumentPointerup);
 	(0,_utils__WEBPACK_IMPORTED_MODULE_3__.enableUserSelect)();
 }
 
@@ -3013,6 +3039,7 @@ function handleDocumentPointerdown(e) {
  * @param {Event} e The DOM event to handle
  */
 function handleDocumentPointermove(e) {
+	// overlay.closest does NOT work -- WHY ??
 	let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 	let rect = svg.getBoundingClientRect();
 
