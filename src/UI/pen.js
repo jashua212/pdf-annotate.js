@@ -54,19 +54,21 @@ function handleDocumentPointerup(e) {
 		} = getMetadata(svg);
 		console.log('lines: ', lines);
 
-		PDFJSAnnotate.getStoreAdapter().addAnnotation(documentId, pageNumber, {
-			type: _penMode, // this affects how the svg element is rendered
-			width: _penSize,
-			color: _penColor,
-			lines
-		}).then((annotation) => {
-			if (path) {
-				svg.removeChild(path);
-			}
+		PDFJSAnnotate.getStoreAdapter()
+			.addAnnotation(documentId, pageNumber, {
+				type: _penMode, // this affects how the svg element is rendered
+				width: _penSize,
+				color: _penColor,
+				lines
+			})
+			.then((annotation) => {
+				if (path) {
+					svg.removeChild(path);
+				}
 
-			// render.appendChild() is the entry method to render the svg element on the parent svg for the applicable page
-			appendChild(svg, annotation);
-		});
+				// render.appendChild() is the entry method to render the svg element on the parent svg for the applicable page
+				appendChild(svg, annotation);
+			});
 	}
 
 	document.removeEventListener('pointermove', handleDocumentPointermove);

@@ -43,7 +43,7 @@ function renderPureLine(a) {
 
 /**
  * Create SVGLineElements from an annotation definition.
- * This is used for annotations of type `strikeout`.
+ * This is used for annotations of type `strikeout` or `line`.
  *
  * @param {Object} a The annotation definition
  * @return {SVGGElement} A group of all lines to be rendered

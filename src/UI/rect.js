@@ -149,17 +149,16 @@ function handleDocumentPointerup(e) {
 	} else if (_drawMode === 'area' && overlay) {
 		let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 		let rect = svg.getBoundingClientRect();
-		let color = _borderColor;
 
 		saveRect(
-			_type,
+			_drawMode,
 			[{
 				top: parseInt(overlay.style.top, 10) + rect.top,
 				left: parseInt(overlay.style.left, 10) + rect.left,
 				width: parseInt(overlay.style.width, 10),
 				height: parseInt(overlay.style.height, 10)
 			}],
-			color
+			_borderColor
 		);
 
 		overlay.parentNode.removeChild(overlay);
@@ -210,7 +209,7 @@ function saveRect(type, rects, color) {
 
 	let boundingRect = svg.getBoundingClientRect();
 
-	if (_drawMode !== 'area' && !color) {
+	if (type !== 'area' && !color) {
 		if (type === 'highlight') {
 			color = 'FFFF00';
 		} else if (type === 'strikeout') {
@@ -244,7 +243,7 @@ function saveRect(type, rects, color) {
 	}
 
 	// Special treatment for area as it only supports a single rect
-	if (_drawMode === 'area') {
+	if (type === 'area') {
 		let rect = annotation.rectangles[0];
 		delete annotation.rectangles;
 		annotation.x = rect.x;

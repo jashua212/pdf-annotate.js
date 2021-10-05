@@ -1670,8 +1670,7 @@ function appendChild(svg, annotation, viewport) {
 	let child;
 
 	switch (annotation.type) {
-	case 'area-red-border':
-	case 'area-blue-border':
+	case 'area':
 	/* case 'highlight': */
 		child = (0,_renderRect__WEBPACK_IMPORTED_MODULE_4__["default"])(annotation);
 		break;
@@ -1693,7 +1692,7 @@ function appendChild(svg, annotation, viewport) {
 	// If no type was provided for an annotation it will result in node being null.
 	// Skip appending/transforming if node doesn't exist.
 	if (child) {
-		console.log('child: ', child);
+		/* console.log('child: ', child); */
 
 		// Set attributes
 		child.setAttribute('data-pdf-annotate-id', annotation.uuid);
@@ -1860,7 +1859,7 @@ function renderPureLine(a) {
 
 /**
  * Create SVGLineElements from an annotation definition.
- * This is used for annotations of type `strikeout`.
+ * This is used for annotations of type `strikeout` or `line`.
  *
  * @param {Object} a The annotation definition
  * @return {SVGGElement} A group of all lines to be rendered
@@ -2656,19 +2655,21 @@ function handleDocumentPointerup(e) {
 		} = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getMetadata)(svg);
 		console.log('lines: ', lines);
 
-		_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().addAnnotation(documentId, pageNumber, {
-			type: _penMode, // this affects how the svg element is rendered
-			width: _penSize,
-			color: _penColor,
-			lines
-		}).then((annotation) => {
-			if (path) {
-				svg.removeChild(path);
-			}
+		_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter()
+			.addAnnotation(documentId, pageNumber, {
+				type: _penMode, // this affects how the svg element is rendered
+				width: _penSize,
+				color: _penColor,
+				lines
+			})
+			.then((annotation) => {
+				if (path) {
+					svg.removeChild(path);
+				}
 
-			// render.appendChild() is the entry method to render the svg element on the parent svg for the applicable page
-			(0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
-		});
+				// render.appendChild() is the entry method to render the svg element on the parent svg for the applicable page
+				(0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
+			});
 	}
 
 	document.removeEventListener('pointermove', handleDocumentPointermove);
@@ -3076,17 +3077,16 @@ function handleDocumentPointerup(e) {
 	} else if (_drawMode === 'area' && overlay) {
 		let svg = overlay.parentNode.querySelector('svg.annotationLayer');
 		let rect = svg.getBoundingClientRect();
-		let color = _borderColor;
 
 		saveRect(
-			_type,
+			_drawMode,
 			[{
 				top: parseInt(overlay.style.top, 10) + rect.top,
 				left: parseInt(overlay.style.left, 10) + rect.left,
 				width: parseInt(overlay.style.width, 10),
 				height: parseInt(overlay.style.height, 10)
 			}],
-			color
+			_borderColor
 		);
 
 		overlay.parentNode.removeChild(overlay);
@@ -3137,7 +3137,7 @@ function saveRect(type, rects, color) {
 
 	let boundingRect = svg.getBoundingClientRect();
 
-	if (_drawMode !== 'area' && !color) {
+	if (type !== 'area' && !color) {
 		if (type === 'highlight') {
 			color = 'FFFF00';
 		} else if (type === 'strikeout') {
@@ -3171,7 +3171,7 @@ function saveRect(type, rects, color) {
 	}
 
 	// Special treatment for area as it only supports a single rect
-	if (_drawMode === 'area') {
+	if (type === 'area') {
 		let rect = annotation.rectangles[0];
 		delete annotation.rectangles;
 		annotation.x = rect.x;

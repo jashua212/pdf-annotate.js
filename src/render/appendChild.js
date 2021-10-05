@@ -117,8 +117,7 @@ export default function appendChild(svg, annotation, viewport) {
 	let child;
 
 	switch (annotation.type) {
-	case 'area-red-border':
-	case 'area-blue-border':
+	case 'area':
 	/* case 'highlight': */
 		child = renderRect(annotation);
 		break;
@@ -140,7 +139,7 @@ export default function appendChild(svg, annotation, viewport) {
 	// If no type was provided for an annotation it will result in node being null.
 	// Skip appending/transforming if node doesn't exist.
 	if (child) {
-		console.log('child: ', child);
+		/* console.log('child: ', child); */
 
 		// Set attributes
 		child.setAttribute('data-pdf-annotate-id', annotation.uuid);
