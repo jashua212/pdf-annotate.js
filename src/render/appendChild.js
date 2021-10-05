@@ -115,15 +115,17 @@ export default function appendChild(svg, annotation, viewport) {
 	}
 
 	let child;
+
 	switch (annotation.type) {
 	case 'area-red-border':
 	case 'area-blue-border':
 	/* case 'highlight': */
 		child = renderRect(annotation);
 		break;
-	/* case 'strikeout':
+	/* case 'strikeout': */
+	case 'line':
 		child = renderLine(annotation);
-		break; */
+		break;
 	case 'point':
 		child = renderPoint(annotation);
 		break;

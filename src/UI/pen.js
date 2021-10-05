@@ -44,6 +44,8 @@ function handleDocumentPointermove(e) {
  * @param {Event} e The DOM event to be handled
  */
 function handleDocumentPointerup(e) {
+	console.log('What is path ?? ', path);
+
 	let svg;
 	if (lines.length > 1 && (svg = findSVGAtPoint(e.clientX, e.clientY))) {
 		let {
@@ -53,7 +55,7 @@ function handleDocumentPointerup(e) {
 		console.log('lines: ', lines);
 
 		PDFJSAnnotate.getStoreAdapter().addAnnotation(documentId, pageNumber, {
-			type: 'drawing',
+			type: _penMode, // this affects how the svg element is rendered
 			width: _penSize,
 			color: _penColor,
 			lines
@@ -62,6 +64,7 @@ function handleDocumentPointerup(e) {
 				svg.removeChild(path);
 			}
 
+			// render.appendChild() is the entry method to render the svg element on the parent svg for the applicable page
 			appendChild(svg, annotation);
 		});
 	}
@@ -127,7 +130,7 @@ function savePoint(x, y) {
 	}
 
 	path = appendChild(svg, {
-		type: 'drawing',
+		type: _penMode,
 		color: _penColor,
 		width: _penSize,
 		lines
@@ -152,7 +155,7 @@ export function enablePen(type) {
 	// I added this block b/c am no longer using setPen() function immed above
 	_penSize = 1;
 	_penColor = /blue/.test(type) ? '#00f' : '#f00';
-	_penMode = /freehand/.test(type) ? 'freehand' : 'line';
+	_penMode = /freehand/.test(type) ? 'drawing' : 'line';
 
 	if (_enabled) {
 		return;

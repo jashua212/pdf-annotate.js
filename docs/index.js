@@ -1668,15 +1668,17 @@ function appendChild(svg, annotation, viewport) {
 	}
 
 	let child;
+
 	switch (annotation.type) {
 	case 'area-red-border':
 	case 'area-blue-border':
 	/* case 'highlight': */
 		child = (0,_renderRect__WEBPACK_IMPORTED_MODULE_4__["default"])(annotation);
 		break;
-	/* case 'strikeout':
-		child = renderLine(annotation);
-		break; */
+	/* case 'strikeout': */
+	case 'line':
+		child = (0,_renderLine__WEBPACK_IMPORTED_MODULE_1__["default"])(annotation);
+		break;
 	case 'point':
 		child = (0,_renderPoint__WEBPACK_IMPORTED_MODULE_3__["default"])(annotation);
 		break;
@@ -1816,18 +1818,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-/**
- * Create SVGLineElements from an annotation definition.
- * This is used for anntations of type `strikeout`.
- *
- * @param {Object} a The annotation definition
- * @return {SVGGElement} A group of all lines to be rendered
- */
-function renderLine(a) {
+function renderRectLine(a) {
 	let group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 	(0,_utils_setAttributes__WEBPACK_IMPORTED_MODULE_0__["default"])(group, {
 		stroke: (0,_utils_normalizeColor__WEBPACK_IMPORTED_MODULE_1__["default"])(a.color || '#f00'),
-		strokeWidth: 1
+		strokeWidth: a.width || 1
 	});
 
 	a.rectangles.forEach((r) => {
@@ -1844,6 +1839,38 @@ function renderLine(a) {
 	});
 
 	return group;
+}
+
+function renderPureLine(a) {
+	let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+	console.log('a: ', a);
+
+	(0,_utils_setAttributes__WEBPACK_IMPORTED_MODULE_0__["default"])(line, {
+		stroke: (0,_utils_normalizeColor__WEBPACK_IMPORTED_MODULE_1__["default"])(a.color || '#f00'),
+		strokeWidth: a.width || 1,
+		x1: a.lines[0][0],
+		y1: a.lines[0][1],
+		x2: a.lines[1][0],
+		y2: a.lines[1][1]
+	});
+
+	return line;
+}
+
+
+/**
+ * Create SVGLineElements from an annotation definition.
+ * This is used for annotations of type `strikeout`.
+ *
+ * @param {Object} a The annotation definition
+ * @return {SVGGElement} A group of all lines to be rendered
+ */
+function renderLine(a) {
+	if (a.rectangles) {
+		return renderRectLine(a);
+	} else {
+		return renderPureLine(a);
+	}
 }
 
 
@@ -2619,6 +2646,8 @@ function handleDocumentPointermove(e) {
  * @param {Event} e The DOM event to be handled
  */
 function handleDocumentPointerup(e) {
+	console.log('What is path ?? ', path);
+
 	let svg;
 	if (lines.length > 1 && (svg = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.findSVGAtPoint)(e.clientX, e.clientY))) {
 		let {
@@ -2628,7 +2657,7 @@ function handleDocumentPointerup(e) {
 		console.log('lines: ', lines);
 
 		_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().addAnnotation(documentId, pageNumber, {
-			type: 'drawing',
+			type: _penMode, // this affects how the svg element is rendered
 			width: _penSize,
 			color: _penColor,
 			lines
@@ -2637,6 +2666,7 @@ function handleDocumentPointerup(e) {
 				svg.removeChild(path);
 			}
 
+			// render.appendChild() is the entry method to render the svg element on the parent svg for the applicable page
 			(0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
 		});
 	}
@@ -2702,7 +2732,7 @@ function savePoint(x, y) {
 	}
 
 	path = (0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, {
-		type: 'drawing',
+		type: _penMode,
 		color: _penColor,
 		width: _penSize,
 		lines
@@ -2727,7 +2757,7 @@ function enablePen(type) {
 	// I added this block b/c am no longer using setPen() function immed above
 	_penSize = 1;
 	_penColor = /blue/.test(type) ? '#00f' : '#f00';
-	_penMode = /freehand/.test(type) ? 'freehand' : 'line';
+	_penMode = /freehand/.test(type) ? 'drawing' : 'line';
 
 	if (_enabled) {
 		return;
