@@ -66,18 +66,21 @@ export function findAnnotationAtPoint(x, y) {
 	if (!svg) {
 		return; // bail
 	}
+	
+	// TEST method
+	const elm = document.elementFromPoint(x, y);
+	console.log('test elm: ', elm);
 
 	// Second, get a list of all the child svgs within that parent svg container
 	let elements = Array.from(svg.querySelectorAll('[data-pdf-annotate-type]'));
-	console.log('elements: ', elements);
+	/* console.log('elements: ', elements); */
 
 	// Third, loop thru these child svgs to find the 1st one whose extrapolated 4-sided rect contains (i.e., 'intersets') the clicked point (x, y)
 	for (let i = 0, l = elements.length; i < l; i++) {
 		let el = elements[i];
 
-		let rect = getOffsetAnnotationRect(el);
-		/* console.log('point x, y: ', x, y);
-		console.log('rect.left: ', rect.left);
+		let rect = getScrolledOffsetAnnotationRect(el); //*****************
+		/* console.log('rect.left: ', rect.left);
 		console.log('rect.right: ', rect.right);
 		console.log('rect.top: ', rect.top);
 		console.log('rect.bottom: ', rect.bottom); */
@@ -101,6 +104,44 @@ export function findAnnotationAtPoint(x, y) {
 export function pointIntersectsRect(x, y, rect) {
 	return y >= rect.top && y <= rect.bottom && x >= rect.left && x <= rect.right;
 }
+
+
+
+export function getScrolledOffsetAnnotationRect(el) {
+	let rect = getAnnotationRect(el);
+
+	let {
+		offsetLeft,
+		offsetTop
+	} = getOffset(el);
+
+	let {
+		scrollTop,
+		scrollLeft
+	} = getScroll(el);
+
+	console.log('OFFSET_left: ', offsetLeft);
+	console.log('SCROLL_left: ', scrollLeft);
+	console.log('window.pageXOffset: ', window.pageXOffset);
+	console.log('___OFFSET_top: ', offsetTop);
+	console.log('___SCROLL_top: ', scrollTop);
+	console.log('___window.pageYOffset: ', window.pageYOffset);
+	
+
+	return {
+		/* top: rect.top + offsetTop - scrollTop,
+		left: rect.left + offsetLeft - scrollLeft,
+		right: rect.right + offsetLeft - scrollLeft,
+		bottom: rect.bottom + offsetTop - scrollTop */
+		
+		top: rect.top + offsetTop - scrollTop,
+		left: rect.left + offsetLeft - scrollLeft,
+		right: rect.right + offsetLeft - scrollLeft,
+		bottom: rect.bottom + offsetTop - scrollTop
+	};
+}
+
+
 
 /**
  * Get the rect of an annotation element accounting for parent svg's offset.
@@ -184,7 +225,7 @@ export function getAnnotationRect(el) {
 		x = Math.min(_x1, _x2);
 		h = Math.abs(_y1 - _y2);
 		w = Math.abs(_x1 - _x2);
-		console.log('x y w h: ', x, y, w, h);
+		/* console.log('x y w h: ', x, y, w, h); */
 
 		if (h === 0) {
 			h += LINE_HEIGHT_ADJUSTED;
@@ -231,11 +272,11 @@ export function getAnnotationRect(el) {
 
 	// Result provides same properties as getBoundingClientRect
 	let result = {
-		top: y,
 		left: x,
 		width: w,
-		height: h,
 		right: x + w,
+		top: y,
+		height: h,
 		bottom: y + h
 	};
 
@@ -246,6 +287,13 @@ export function getAnnotationRect(el) {
 	if (!['svg', 'g'].includes(el.nodeName.toLowerCase())) {
 		result = scaleUp(findSVGAtPoint(rect.left, rect.top), result);
 	}
+
+	console.log('pure rect left: ', result.left);
+	console.log('pure rect + width: ', result.width);
+	console.log('pure rect = right: ', result.right);
+	console.log('___pure rect top: ', result.top);
+	console.log('___pure rect + height: ', result.height);
+	console.log('___pure rect = bottom: ', result.bottom);
 
 	return result;
 }
@@ -298,7 +346,8 @@ export function getScroll(el) {
 	let parentNode = el;
 
 	while ((parentNode = parentNode.parentNode) &&
-		parentNode !== document) {
+			parentNode !== document
+	) {
 		scrollTop += parentNode.scrollTop;
 		scrollLeft += parentNode.scrollLeft;
 	}
@@ -319,7 +368,8 @@ export function getOffset(el) {
 	let parentNode = el.closest('svg.annotationLayer');
 
 	/* while ((parentNode = parentNode.parentNode) &&
-		parentNode !== document) {
+			parentNode !== document
+	) {
 		if (parentNode.nodeName.toUpperCase() === 'SVG') {
 			break;
 		}

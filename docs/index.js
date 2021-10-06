@@ -341,15 +341,19 @@ let clickNode;
  */
 document.addEventListener('click', function handleDocumentClick(e) {
 	// Find the applicable svg child element (if any) -- i.e., NOT the parent svg container, but rather the actual svg child element for this annotation
+	console.log('client X, Y: ', e.clientX, e.clientY);
+	console.log('page X, Y: ', e.pageX, e.pageY);
 	let target = (0,_utils__WEBPACK_IMPORTED_MODULE_1__.findAnnotationAtPoint)(e.clientX, e.clientY);
 
 	// Emit annotation:blur if clickNode is no longer clicked
 	if (clickNode && clickNode !== target) {
+		// the listener is attached in 'edit.js'
 		emitter.emit('annotation:blur', clickNode);
 	}
 
 	// Emit annotation:click if target was clicked
 	if (target) {
+		// the listener is attached in 'edit.js'
 		emitter.emit('annotation:click', target);
 	}
 
@@ -900,6 +904,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "findSVGAtPoint": () => (/* binding */ findSVGAtPoint),
 /* harmony export */   "findAnnotationAtPoint": () => (/* binding */ findAnnotationAtPoint),
 /* harmony export */   "pointIntersectsRect": () => (/* binding */ pointIntersectsRect),
+/* harmony export */   "getScrolledOffsetAnnotationRect": () => (/* binding */ getScrolledOffsetAnnotationRect),
 /* harmony export */   "getOffsetAnnotationRect": () => (/* binding */ getOffsetAnnotationRect),
 /* harmony export */   "getAnnotationRect": () => (/* binding */ getAnnotationRect),
 /* harmony export */   "scaleUp": () => (/* binding */ scaleUp),
@@ -980,18 +985,21 @@ function findAnnotationAtPoint(x, y) {
 	if (!svg) {
 		return; // bail
 	}
+	
+	// TEST method
+	const elm = document.elementFromPoint(x, y);
+	console.log('test elm: ', elm);
 
 	// Second, get a list of all the child svgs within that parent svg container
 	let elements = Array.from(svg.querySelectorAll('[data-pdf-annotate-type]'));
-	console.log('elements: ', elements);
+	/* console.log('elements: ', elements); */
 
 	// Third, loop thru these child svgs to find the 1st one whose extrapolated 4-sided rect contains (i.e., 'intersets') the clicked point (x, y)
 	for (let i = 0, l = elements.length; i < l; i++) {
 		let el = elements[i];
 
-		let rect = getOffsetAnnotationRect(el);
-		/* console.log('point x, y: ', x, y);
-		console.log('rect.left: ', rect.left);
+		let rect = getScrolledOffsetAnnotationRect(el); //*****************
+		/* console.log('rect.left: ', rect.left);
 		console.log('rect.right: ', rect.right);
 		console.log('rect.top: ', rect.top);
 		console.log('rect.bottom: ', rect.bottom); */
@@ -1015,6 +1023,44 @@ function findAnnotationAtPoint(x, y) {
 function pointIntersectsRect(x, y, rect) {
 	return y >= rect.top && y <= rect.bottom && x >= rect.left && x <= rect.right;
 }
+
+
+
+function getScrolledOffsetAnnotationRect(el) {
+	let rect = getAnnotationRect(el);
+
+	let {
+		offsetLeft,
+		offsetTop
+	} = getOffset(el);
+
+	let {
+		scrollTop,
+		scrollLeft
+	} = getScroll(el);
+
+	console.log('OFFSET_left: ', offsetLeft);
+	console.log('SCROLL_left: ', scrollLeft);
+	console.log('window.pageXOffset: ', window.pageXOffset);
+	console.log('___OFFSET_top: ', offsetTop);
+	console.log('___SCROLL_top: ', scrollTop);
+	console.log('___window.pageYOffset: ', window.pageYOffset);
+	
+
+	return {
+		/* top: rect.top + offsetTop - scrollTop,
+		left: rect.left + offsetLeft - scrollLeft,
+		right: rect.right + offsetLeft - scrollLeft,
+		bottom: rect.bottom + offsetTop - scrollTop */
+		
+		top: rect.top + offsetTop - scrollTop,
+		left: rect.left + offsetLeft - scrollLeft,
+		right: rect.right + offsetLeft - scrollLeft,
+		bottom: rect.bottom + offsetTop - scrollTop
+	};
+}
+
+
 
 /**
  * Get the rect of an annotation element accounting for parent svg's offset.
@@ -1098,7 +1144,7 @@ function getAnnotationRect(el) {
 		x = Math.min(_x1, _x2);
 		h = Math.abs(_y1 - _y2);
 		w = Math.abs(_x1 - _x2);
-		console.log('x y w h: ', x, y, w, h);
+		/* console.log('x y w h: ', x, y, w, h); */
 
 		if (h === 0) {
 			h += LINE_HEIGHT_ADJUSTED;
@@ -1145,11 +1191,11 @@ function getAnnotationRect(el) {
 
 	// Result provides same properties as getBoundingClientRect
 	let result = {
-		top: y,
 		left: x,
 		width: w,
-		height: h,
 		right: x + w,
+		top: y,
+		height: h,
 		bottom: y + h
 	};
 
@@ -1160,6 +1206,13 @@ function getAnnotationRect(el) {
 	if (!['svg', 'g'].includes(el.nodeName.toLowerCase())) {
 		result = scaleUp(findSVGAtPoint(rect.left, rect.top), result);
 	}
+
+	console.log('pure rect left: ', result.left);
+	console.log('pure rect + width: ', result.width);
+	console.log('pure rect = right: ', result.right);
+	console.log('___pure rect top: ', result.top);
+	console.log('___pure rect + height: ', result.height);
+	console.log('___pure rect = bottom: ', result.bottom);
 
 	return result;
 }
@@ -1212,7 +1265,8 @@ function getScroll(el) {
 	let parentNode = el;
 
 	while ((parentNode = parentNode.parentNode) &&
-		parentNode !== document) {
+			parentNode !== document
+	) {
 		scrollTop += parentNode.scrollTop;
 		scrollLeft += parentNode.scrollLeft;
 	}
@@ -1233,7 +1287,8 @@ function getOffset(el) {
 	let parentNode = el.closest('svg.annotationLayer');
 
 	/* while ((parentNode = parentNode.parentNode) &&
-		parentNode !== document) {
+			parentNode !== document
+	) {
 		if (parentNode.nodeName.toUpperCase() === 'SVG') {
 			break;
 		}
@@ -2254,6 +2309,7 @@ const OVERLAY_BORDER_SIZE = 3;
 function createEditOverlay(target) {
 	destroyEditOverlay();
 
+	// create a div as overlay
 	overlay = document.createElement('div');
 	let anchor = document.createElement('a');
 	let parentNode = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.findSVGContainer)(target).parentNode;
@@ -2402,7 +2458,7 @@ function handleDocumentPointerdown(e) {
 	}
 
 	// Highlight and strikeout annotations are bound to text within the document.
-	// It doesn't make sense to allow repositioning these types of annotations.
+	// It doesn't make sense to allow repositioning of these types of annotations.
 	let annotationId = overlay.getAttribute('data-target-id');
 	let target = document.querySelector(`[data-pdf-annotate-id="${annotationId}"]`);
 	let type = target.getAttribute('data-pdf-annotate-type');
@@ -2482,92 +2538,95 @@ function handleDocumentPointerup(e) {
 		};
 	}
 
-	_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().getAnnotation(documentId, annotationId).then((annotation) => {
-		if (/(area|highlight|point|textbox)/.test(type)) {
-			let {
-				deltaX,
-				deltaY
-			} = getDelta('x', 'y');
-			[...target].forEach((t, i) => {
-				if (deltaY !== 0) {
-					let modelY = parseInt(t.getAttribute('y'), 10) + deltaY;
-					let viewY = modelY;
+	_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter()
+		.getAnnotation(documentId, annotationId)
+		.then((annotation) => {
+			if (/(area|highlight|point|textbox)/.test(type)) {
+				let {
+					deltaX,
+					deltaY
+				} = getDelta('x', 'y');
 
-					if (type === 'textbox') {
-						viewY += annotation.size;
+				[...target].forEach((t, i) => {
+					if (deltaY !== 0) {
+						let modelY = parseInt(t.getAttribute('y'), 10) + deltaY;
+						let viewY = modelY;
+
+						if (type === 'textbox') {
+							viewY += annotation.size;
+						}
+
+						if (type === 'point') {
+							viewY = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleUp)(svg, {
+								viewY
+							}).viewY;
+						}
+
+						t.setAttribute('y', viewY);
+						if (annotation.rectangles) {
+							annotation.rectangles[i].y = modelY;
+						} else if (annotation.y) {
+							annotation.y = modelY;
+						}
 					}
 
-					if (type === 'point') {
-						viewY = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleUp)(svg, {
-							viewY
-						}).viewY;
+					if (deltaX !== 0) {
+						let modelX = parseInt(t.getAttribute('x'), 10) + deltaX;
+						let viewX = modelX;
+
+						if (type === 'point') {
+							viewX = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleUp)(svg, {
+								viewX
+							}).viewX;
+						}
+
+						t.setAttribute('x', viewX);
+						if (annotation.rectangles) {
+							annotation.rectangles[i].x = modelX;
+						} else if (annotation.x) {
+							annotation.x = modelX;
+						}
 					}
+				});
+				// } else if (type === 'strikeout') {
+				//   let { deltaX, deltaY } = getDelta('x1', 'y1');
+				//   [...target].forEach(target, (t, i) => {
+				//     if (deltaY !== 0) {
+				//       t.setAttribute('y1', parseInt(t.getAttribute('y1'), 10) + deltaY);
+				//       t.setAttribute('y2', parseInt(t.getAttribute('y2'), 10) + deltaY);
+				//       annotation.rectangles[i].y = parseInt(t.getAttribute('y1'), 10);
+				//     }
+				//     if (deltaX !== 0) {
+				//       t.setAttribute('x1', parseInt(t.getAttribute('x1'), 10) + deltaX);
+				//       t.setAttribute('x2', parseInt(t.getAttribute('x2'), 10) + deltaX);
+				//       annotation.rectangles[i].x = parseInt(t.getAttribute('x1'), 10);
+				//     }
+				//   });
+			} else if (type === 'drawing') {
+				let rect = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleDown)(svg, (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getAnnotationRect)(target[0]));
+				let[originX, originY] = annotation.lines[0];
+				let {
+					deltaX,
+					deltaY
+				} = calcDelta(originX, originY);
 
-					t.setAttribute('y', viewY);
-					if (annotation.rectangles) {
-						annotation.rectangles[i].y = modelY;
-					} else if (annotation.y) {
-						annotation.y = modelY;
-					}
-				}
+				// origin isn't necessarily at 0/0 in relation to overlay x/y
+				// adjust the difference between overlay and drawing coords
+				deltaY += (originY - rect.top);
+				deltaX += (originX - rect.left);
 
-				if (deltaX !== 0) {
-					let modelX = parseInt(t.getAttribute('x'), 10) + deltaX;
-					let viewX = modelX;
+				annotation.lines.forEach((line, i) => {
+					let[x, y] = annotation.lines[i];
+					annotation.lines[i][0] = x + deltaX;
+					annotation.lines[i][1] = y + deltaY;
+				});
 
-					if (type === 'point') {
-						viewX = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleUp)(svg, {
-							viewX
-						}).viewX;
-					}
+				target[0].parentNode.removeChild(target[0]);
+				(0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
+			}
 
-					t.setAttribute('x', viewX);
-					if (annotation.rectangles) {
-						annotation.rectangles[i].x = modelX;
-					} else if (annotation.x) {
-						annotation.x = modelX;
-					}
-				}
-			});
-			// } else if (type === 'strikeout') {
-			//   let { deltaX, deltaY } = getDelta('x1', 'y1');
-			//   [...target].forEach(target, (t, i) => {
-			//     if (deltaY !== 0) {
-			//       t.setAttribute('y1', parseInt(t.getAttribute('y1'), 10) + deltaY);
-			//       t.setAttribute('y2', parseInt(t.getAttribute('y2'), 10) + deltaY);
-			//       annotation.rectangles[i].y = parseInt(t.getAttribute('y1'), 10);
-			//     }
-			//     if (deltaX !== 0) {
-			//       t.setAttribute('x1', parseInt(t.getAttribute('x1'), 10) + deltaX);
-			//       t.setAttribute('x2', parseInt(t.getAttribute('x2'), 10) + deltaX);
-			//       annotation.rectangles[i].x = parseInt(t.getAttribute('x1'), 10);
-			//     }
-			//   });
-		} else if (type === 'drawing') {
-			let rect = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.scaleDown)(svg, (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getAnnotationRect)(target[0]));
-			let[originX, originY] = annotation.lines[0];
-			let {
-				deltaX,
-				deltaY
-			} = calcDelta(originX, originY);
-
-			// origin isn't necessarily at 0/0 in relation to overlay x/y
-			// adjust the difference between overlay and drawing coords
-			deltaY += (originY - rect.top);
-			deltaX += (originX - rect.left);
-
-			annotation.lines.forEach((line, i) => {
-				let[x, y] = annotation.lines[i];
-				annotation.lines[i][0] = x + deltaX;
-				annotation.lines[i][1] = y + deltaY;
-			});
-
-			target[0].parentNode.removeChild(target[0]);
-			(0,_render_appendChild__WEBPACK_IMPORTED_MODULE_1__["default"])(svg, annotation);
-		}
-
-		_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().editAnnotation(documentId, annotationId, annotation);
-	});
+			_PDFJSAnnotate__WEBPACK_IMPORTED_MODULE_0__["default"].getStoreAdapter().editAnnotation(documentId, annotationId, annotation);
+		});
 
 	setTimeout(() => {
 		isDragging = false;

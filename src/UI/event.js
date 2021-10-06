@@ -16,15 +16,19 @@ let clickNode;
  */
 document.addEventListener('click', function handleDocumentClick(e) {
 	// Find the applicable svg child element (if any) -- i.e., NOT the parent svg container, but rather the actual svg child element for this annotation
+	console.log('client X, Y: ', e.clientX, e.clientY);
+	console.log('page X, Y: ', e.pageX, e.pageY);
 	let target = findAnnotationAtPoint(e.clientX, e.clientY);
 
 	// Emit annotation:blur if clickNode is no longer clicked
 	if (clickNode && clickNode !== target) {
+		// the listener is attached in 'edit.js'
 		emitter.emit('annotation:blur', clickNode);
 	}
 
 	// Emit annotation:click if target was clicked
 	if (target) {
+		// the listener is attached in 'edit.js'
 		emitter.emit('annotation:click', target);
 	}
 

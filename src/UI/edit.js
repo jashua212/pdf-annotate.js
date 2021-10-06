@@ -32,6 +32,7 @@ const OVERLAY_BORDER_SIZE = 3;
 function createEditOverlay(target) {
 	destroyEditOverlay();
 
+	// create a div as overlay
 	overlay = document.createElement('div');
 	let anchor = document.createElement('a');
 	let parentNode = findSVGContainer(target).parentNode;
@@ -180,7 +181,7 @@ function handleDocumentPointerdown(e) {
 	}
 
 	// Highlight and strikeout annotations are bound to text within the document.
-	// It doesn't make sense to allow repositioning these types of annotations.
+	// It doesn't make sense to allow repositioning of these types of annotations.
 	let annotationId = overlay.getAttribute('data-target-id');
 	let target = document.querySelector(`[data-pdf-annotate-id="${annotationId}"]`);
 	let type = target.getAttribute('data-pdf-annotate-type');
@@ -260,92 +261,95 @@ function handleDocumentPointerup(e) {
 		};
 	}
 
-	PDFJSAnnotate.getStoreAdapter().getAnnotation(documentId, annotationId).then((annotation) => {
-		if (/(area|highlight|point|textbox)/.test(type)) {
-			let {
-				deltaX,
-				deltaY
-			} = getDelta('x', 'y');
-			[...target].forEach((t, i) => {
-				if (deltaY !== 0) {
-					let modelY = parseInt(t.getAttribute('y'), 10) + deltaY;
-					let viewY = modelY;
+	PDFJSAnnotate.getStoreAdapter()
+		.getAnnotation(documentId, annotationId)
+		.then((annotation) => {
+			if (/(area|highlight|point|textbox)/.test(type)) {
+				let {
+					deltaX,
+					deltaY
+				} = getDelta('x', 'y');
 
-					if (type === 'textbox') {
-						viewY += annotation.size;
+				[...target].forEach((t, i) => {
+					if (deltaY !== 0) {
+						let modelY = parseInt(t.getAttribute('y'), 10) + deltaY;
+						let viewY = modelY;
+
+						if (type === 'textbox') {
+							viewY += annotation.size;
+						}
+
+						if (type === 'point') {
+							viewY = scaleUp(svg, {
+								viewY
+							}).viewY;
+						}
+
+						t.setAttribute('y', viewY);
+						if (annotation.rectangles) {
+							annotation.rectangles[i].y = modelY;
+						} else if (annotation.y) {
+							annotation.y = modelY;
+						}
 					}
 
-					if (type === 'point') {
-						viewY = scaleUp(svg, {
-							viewY
-						}).viewY;
+					if (deltaX !== 0) {
+						let modelX = parseInt(t.getAttribute('x'), 10) + deltaX;
+						let viewX = modelX;
+
+						if (type === 'point') {
+							viewX = scaleUp(svg, {
+								viewX
+							}).viewX;
+						}
+
+						t.setAttribute('x', viewX);
+						if (annotation.rectangles) {
+							annotation.rectangles[i].x = modelX;
+						} else if (annotation.x) {
+							annotation.x = modelX;
+						}
 					}
+				});
+				// } else if (type === 'strikeout') {
+				//   let { deltaX, deltaY } = getDelta('x1', 'y1');
+				//   [...target].forEach(target, (t, i) => {
+				//     if (deltaY !== 0) {
+				//       t.setAttribute('y1', parseInt(t.getAttribute('y1'), 10) + deltaY);
+				//       t.setAttribute('y2', parseInt(t.getAttribute('y2'), 10) + deltaY);
+				//       annotation.rectangles[i].y = parseInt(t.getAttribute('y1'), 10);
+				//     }
+				//     if (deltaX !== 0) {
+				//       t.setAttribute('x1', parseInt(t.getAttribute('x1'), 10) + deltaX);
+				//       t.setAttribute('x2', parseInt(t.getAttribute('x2'), 10) + deltaX);
+				//       annotation.rectangles[i].x = parseInt(t.getAttribute('x1'), 10);
+				//     }
+				//   });
+			} else if (type === 'drawing') {
+				let rect = scaleDown(svg, getAnnotationRect(target[0]));
+				let[originX, originY] = annotation.lines[0];
+				let {
+					deltaX,
+					deltaY
+				} = calcDelta(originX, originY);
 
-					t.setAttribute('y', viewY);
-					if (annotation.rectangles) {
-						annotation.rectangles[i].y = modelY;
-					} else if (annotation.y) {
-						annotation.y = modelY;
-					}
-				}
+				// origin isn't necessarily at 0/0 in relation to overlay x/y
+				// adjust the difference between overlay and drawing coords
+				deltaY += (originY - rect.top);
+				deltaX += (originX - rect.left);
 
-				if (deltaX !== 0) {
-					let modelX = parseInt(t.getAttribute('x'), 10) + deltaX;
-					let viewX = modelX;
+				annotation.lines.forEach((line, i) => {
+					let[x, y] = annotation.lines[i];
+					annotation.lines[i][0] = x + deltaX;
+					annotation.lines[i][1] = y + deltaY;
+				});
 
-					if (type === 'point') {
-						viewX = scaleUp(svg, {
-							viewX
-						}).viewX;
-					}
+				target[0].parentNode.removeChild(target[0]);
+				appendChild(svg, annotation);
+			}
 
-					t.setAttribute('x', viewX);
-					if (annotation.rectangles) {
-						annotation.rectangles[i].x = modelX;
-					} else if (annotation.x) {
-						annotation.x = modelX;
-					}
-				}
-			});
-			// } else if (type === 'strikeout') {
-			//   let { deltaX, deltaY } = getDelta('x1', 'y1');
-			//   [...target].forEach(target, (t, i) => {
-			//     if (deltaY !== 0) {
-			//       t.setAttribute('y1', parseInt(t.getAttribute('y1'), 10) + deltaY);
-			//       t.setAttribute('y2', parseInt(t.getAttribute('y2'), 10) + deltaY);
-			//       annotation.rectangles[i].y = parseInt(t.getAttribute('y1'), 10);
-			//     }
-			//     if (deltaX !== 0) {
-			//       t.setAttribute('x1', parseInt(t.getAttribute('x1'), 10) + deltaX);
-			//       t.setAttribute('x2', parseInt(t.getAttribute('x2'), 10) + deltaX);
-			//       annotation.rectangles[i].x = parseInt(t.getAttribute('x1'), 10);
-			//     }
-			//   });
-		} else if (type === 'drawing') {
-			let rect = scaleDown(svg, getAnnotationRect(target[0]));
-			let[originX, originY] = annotation.lines[0];
-			let {
-				deltaX,
-				deltaY
-			} = calcDelta(originX, originY);
-
-			// origin isn't necessarily at 0/0 in relation to overlay x/y
-			// adjust the difference between overlay and drawing coords
-			deltaY += (originY - rect.top);
-			deltaX += (originX - rect.left);
-
-			annotation.lines.forEach((line, i) => {
-				let[x, y] = annotation.lines[i];
-				annotation.lines[i][0] = x + deltaX;
-				annotation.lines[i][1] = y + deltaY;
-			});
-
-			target[0].parentNode.removeChild(target[0]);
-			appendChild(svg, annotation);
-		}
-
-		PDFJSAnnotate.getStoreAdapter().editAnnotation(documentId, annotationId, annotation);
-	});
+			PDFJSAnnotate.getStoreAdapter().editAnnotation(documentId, annotationId, annotation);
+		});
 
 	setTimeout(() => {
 		isDragging = false;
