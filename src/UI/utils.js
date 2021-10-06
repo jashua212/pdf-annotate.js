@@ -66,24 +66,26 @@ export function findAnnotationAtPoint(x, y) {
 	if (!svg) {
 		return; // bail
 	}
-	
+
 	// TEST method
-	const elm = document.elementFromPoint(x, y);
+	/* const elm = document.elementFromPoint(x, y);
 	console.log('test elm: ', elm);
+
+	if (elm) {
+		return elm;
+	}
+
+	return null; */
 
 	// Second, get a list of all the child svgs within that parent svg container
 	let elements = Array.from(svg.querySelectorAll('[data-pdf-annotate-type]'));
-	/* console.log('elements: ', elements); */
 
-	// Third, loop thru these child svgs to find the 1st one whose extrapolated 4-sided rect contains (i.e., 'intersets') the clicked point (x, y)
+	// Third, loop thru these child svgs to find the 1st one whose extrapolated 4-sided rect contains (i.e., 'intersects') the clicked point (x, y)
 	for (let i = 0, l = elements.length; i < l; i++) {
 		let el = elements[i];
 
-		let rect = getScrolledOffsetAnnotationRect(el); //*****************
-		/* console.log('rect.left: ', rect.left);
-		console.log('rect.right: ', rect.right);
-		console.log('rect.top: ', rect.top);
-		console.log('rect.bottom: ', rect.bottom); */
+		// this is the key function call -- to get the bounding client rect for each child svg element in the parent svg container -- see below
+		let rect = getOffsetAnnotationRect(el, svg); //*****************
 
 		if (pointIntersectsRect(x, y, rect)) {
 			return el;
@@ -106,9 +108,9 @@ export function pointIntersectsRect(x, y, rect) {
 }
 
 
-
-export function getScrolledOffsetAnnotationRect(el) {
-	let rect = getAnnotationRect(el);
+// MINE
+export function getScrolledOffsetAnnotationRect(el, svg) {
+	let rect = getAnnotationRect(el, svg);
 
 	let {
 		offsetLeft,
@@ -126,14 +128,14 @@ export function getScrolledOffsetAnnotationRect(el) {
 	console.log('___OFFSET_top: ', offsetTop);
 	console.log('___SCROLL_top: ', scrollTop);
 	console.log('___window.pageYOffset: ', window.pageYOffset);
-	
+
 
 	return {
 		/* top: rect.top + offsetTop - scrollTop,
 		left: rect.left + offsetLeft - scrollLeft,
 		right: rect.right + offsetLeft - scrollLeft,
 		bottom: rect.bottom + offsetTop - scrollTop */
-		
+
 		top: rect.top + offsetTop - scrollTop,
 		left: rect.left + offsetLeft - scrollLeft,
 		right: rect.right + offsetLeft - scrollLeft,
@@ -149,19 +151,29 @@ export function getScrolledOffsetAnnotationRect(el) {
  * @param {Element} el The element to get the rect of
  * @return {Object} The dimensions of the element
  */
-export function getOffsetAnnotationRect(el) {
-	let rect = getAnnotationRect(el);
+export function getOffsetAnnotationRect(el, svg) {
+	let rect = getAnnotationRect(el, svg);
 
 	let {
 		offsetLeft,
 		offsetTop
 	} = getOffset(el);
 
+	const h = rect.height;
+	const w = rect.width;
+	const x = rect.left + offsetLeft;
+	const y = rect.top + offsetTop;
+
+	console.log('offset x1_x2: ', x, x+w);
+	console.log('offset y1_y2: ', y, y+h);
+
 	return {
-		top: rect.top + offsetTop,
-		left: rect.left + offsetLeft,
-		right: rect.right + offsetLeft,
-		bottom: rect.bottom + offsetTop
+		left: x,
+		width: w,
+		right: x + w,
+		top: y,
+		height: h,
+		bottom: y + h
 	};
 }
 
@@ -169,22 +181,24 @@ export function getOffsetAnnotationRect(el) {
  * Get the rect of an annotation element.
  *
  * @param {Element} el The element to get the rect of
+ * @param {Element} svg The element's parent svg container
  * @return {Object} The dimensions of the element
  */
-export function getAnnotationRect(el) {
+export function getAnnotationRect(el, svg) {
 	let h = 0,
 		w = 0,
 		x = 0,
 		y = 0;
 
 	let rect = el.getBoundingClientRect();
+	let elNodeName = el.nodeName.toLowerCase();
 
 	// TODO these should be calculated somehow
-	// These 2 constants come into play when dealing with a zero height or zero width svg element
+	// These 2 constants come into play when dealing with a zero height or zero width svg line element
 	const LINE_HEIGHT_ADJUSTED = 16;
 	const LINE_WIDTH_ADJUSTED = 8;
 
-	switch (el.nodeName.toLowerCase()) {
+	switch (elNodeName) {
 	case 'path': // applicable to freehand pen draws
 		let minX,
 			maxX,
@@ -256,8 +270,8 @@ export function getAnnotationRect(el) {
 		y = rect.top - offsetTop;
 
 		if (el.getAttribute('data-pdf-annotate-type') === 'strikeout') {
-			h += LINE_OFFSET;
-			y -= (LINE_OFFSET / 2);
+			h += LINE_HEIGHT_ADJUSTED;
+			y -= (LINE_HEIGHT_ADJUSTED / 2);
 		}
 		break;
 
@@ -284,16 +298,14 @@ export function getAnnotationRect(el) {
 	// lines or rects no adjustment needs to be made for scale.
 	// I assume that the scale is already being handled
 	// natively by virtue of the `transform` attribute.
-	if (!['svg', 'g'].includes(el.nodeName.toLowerCase())) {
-		result = scaleUp(findSVGAtPoint(rect.left, rect.top), result);
+	/* console.log('svg: ', svg);
+	console.log('elNodeName: ', elNodeName); */
+	if (!/^(svg|g)$/.test(elNodeName)) {
+		result = scaleUp(svg, result);
 	}
 
-	console.log('pure rect left: ', result.left);
-	console.log('pure rect + width: ', result.width);
-	console.log('pure rect = right: ', result.right);
-	console.log('___pure rect top: ', result.top);
-	console.log('___pure rect + height: ', result.height);
-	console.log('___pure rect = bottom: ', result.bottom);
+	console.log('pureScaledUp x1_x2: ', result.left, result.right);
+	console.log('pureScaledUp y1_y2: ', result.top, result.bottom);
 
 	return result;
 }
@@ -308,6 +320,8 @@ export function getAnnotationRect(el) {
 export function scaleUp(svg, rect) {
 	let result = {};
 	let { viewport } = getMetadata(svg);
+	console.log('svg: ', svg);
+	console.log('typeof viewport.scale: ', typeof viewport.scale);
 
 	Object.keys(rect).forEach((key) => {
 		result[key] = rect[key] * viewport.scale;
