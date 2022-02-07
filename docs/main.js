@@ -1,8 +1,8 @@
 
 
 //***********************************************
-// This is the entry file for webpack
-// index.js is the resulting compiled file, which I rename as 'pdf-annotate-index' for use in exams_SAT
+// docs/main.js is the entry file for webpack
+// docs/index.js is the resulting compiled file, which I rename as 'pdf-annotate-index' for use in exams_SAT
 //
 // Structure:
 // 		div#content-wrapper       --> originally, position absolute and scroll element
@@ -173,37 +173,34 @@ render();
 
 // Toolbar buttons
 (function () {
-	// always set initial tooltype as 'cursor' -- DON'T store this in localStorage
-	// am doing away with the button for 'cursor' since that is the default state and all toolbar actions will return to this default state when done (instead of sticking)
-	let tooltype = 'cursor';
+	// always set initial tooltype state as 'none'
+	// NO need to store tooltype state in localStorage b/c not persisting it after closing browser
+	let tooltype = 'none';
 	setActiveToolbarItem(tooltype);
 
-	// orig formulation is below
-	/* let tooltype = 'cursor';
-	let tooltype = localStorage.getItem(`${RENDER_OPTIONS.documentId}/tooltype`) || 'cursor';
-	if (tooltype) {
-		setActiveToolbarItem(tooltype, document.querySelector(`.toolbar button[data-tooltype=${tooltype}]`));
-	} */
+	function setActiveToolbarItem(type, btn) {
+		// when this function is invoked, the pre-existing state is 'tooltype'
+		// the new state is 'type'
+		console.log('preexisting state stored as tooltype: ', tooltype);
+		console.log('new type passed as param: ', type);
 
-	function setActiveToolbarItem(type, button) {
-		console.log('type passed as param: ', type);
-		console.log('tooltype: ', tooltype);
-
+		// turn off pre-existing button state
 		let active = document.querySelector('.toolbar button.active');
 		if (active) {
 			active.classList.remove('active');
 
 			switch (tooltype) {
-			case 'cursor':
+			/* case 'cursor':
 				UI.disableEdit();
-				break;
+				break; */
 			case 'draw-red-line':
 			case 'draw-blue-line':
 			case 'draw-red-freehand':
 			case 'draw-blue-freehand':
 				UI.disablePen();
 				break;
-			case 'text':
+			case 'text-red':
+			case 'text-blue':
 				UI.disableText();
 				break;
 			/* case 'point':
@@ -218,56 +215,70 @@ render();
 			}
 		}
 
+		// turn on current button state
+		let button = btn || document.querySelector(`.toolbar button[data-tooltype=${type}]`);
 		if (button) {
 			button.classList.add('active');
-		}
-		if (tooltype !== type) {
-			localStorage.setItem(`${RENDER_OPTIONS.documentId}/tooltype`, type);
+
+			switch (type) {
+			/* case 'cursor':
+				UI.enableEdit();
+				break; */
+			// since NO LONGER using colorPicker and thicknessPicker for drawing, there is no need for setPen function (imported from UI.pen) anymore
+			// instead, pass in type as a parameter to UI.enablePen just like what we already do for UI.enableRect(type) below
+			case 'draw-red-line':
+			case 'draw-blue-line':
+			case 'draw-red-freehand':
+			case 'draw-blue-freehand':
+				UI.enablePen(type);
+				break;
+			case 'text-red':
+			case 'text-blue':
+				UI.enableText(type);
+				break;
+			/* case 'point':
+				UI.enablePoint();
+				break; */
+			case 'area-red-border':
+			case 'area-blue-border':
+			/* case 'highlight':
+			case 'strikeout': */
+				UI.enableRect(type);
+				break;
+			}
 		}
 
-		// assign the passed in 'type' param to the global variable 'tooltype'
+		// set passed in param ('type') to be the global variable ('tooltype')
 		tooltype = type;
-
-		switch (type) {
-		case 'cursor':
-			UI.enableEdit();
-			break;
-			
-		// since NO LONGER using colorPicker and thicknessPicker for drawing, there is no need for setPen function (imported from UI.pen) anymore
-		// instead, pass in type as a parameter to UI.enablePen just like what we already do for UI.enableRect(type) below
-		case 'draw-red-line':
-		case 'draw-blue-line':
-		case 'draw-red-freehand':
-		case 'draw-blue-freehand':
-			UI.enablePen(type);
-			break;
-		case 'text':
-			UI.enableText();
-			break;
-		/* case 'point':
-			UI.enablePoint();
-			break; */
-		case 'area-red-border':
-		case 'area-blue-border':
-		/* case 'highlight':
-		case 'strikeout': */
-			UI.enableRect(type);
-			break;
-		}
 	}
 
 	function handleToolbarClick(e) {
 		const target = e.target;
-		const tooltype = e.target.getAttribute('data-tooltype');
-		if (target.nodeName === 'BUTTON' && tooltype) {
-			setActiveToolbarItem(tooltype, target);
+		const type = e.target.getAttribute('data-tooltype');
+		if (target.nodeName === 'BUTTON' && type) {
+			console.log('handleToolbarClick type: ', type);
+
+			// need to blur every button after it has been clicked; otherwise, it
+			// will be affected by style imposed on all buttons by page-styles.css
+			target.blur();
+
+			if (type === 'page-clear' || type === tooltype) {
+				// ensure that this clicked btn does NOT get activated, while
+				// de-activating it if it is being re-clicked by user
+				setActiveToolbarItem('none');
+			} else {
+				// normal behavior
+				setActiveToolbarItem(type, target);
+			}
 		}
 	}
-
 	document.querySelector('.toolbar').addEventListener('click', handleToolbarClick);
 
+	// a 'resetToolbar' event gets fired elsewhere whenever an annotation is created
 	UI.addEventListener('resetToolbar', (e) => {
-		setActiveToolbarItem('cursor');
+		// KEY: pass in preexisting 'tooltype' state so buttons (and their related listeners)
+		// remain selected ('active') after drawing an annotation
+		setActiveToolbarItem(tooltype);
 	});
 })();
 
@@ -431,9 +442,9 @@ render();
 	document.querySelector('.toolbar .rotate-cw').addEventListener('click', handleRotateCWClick);
 })(); */
 
-// Clear toolbar button
+// Clear and page-clear toolbar button
 (function () {
-	function handleClearClick(e) {
+	/* function handleClearClick(e) {
 		if (confirm('\nAre you sure you want to clear ALL annotations?')) {
 			for (let i = 0; i < NUM_PAGES; i++) {
 				document.querySelector(`div#pageContainer${i+1} svg.annotationLayer`).innerHTML = '';
@@ -442,7 +453,28 @@ render();
 			localStorage.removeItem(`${RENDER_OPTIONS.documentId}/annotations`);
 		}
 	}
-	document.querySelector('.toolbar .clear').addEventListener('click', handleClearClick);
+	document.querySelector('.toolbar .clear').addEventListener('click', handleClearClick); */
+
+	function handlePageClearClick(e) {
+		const page = document.querySelector('div.page:not(.hidden)');
+		const annoLayer = page.querySelector('svg.annotationLayer');
+		if (annoLayer && annoLayer.innerHTML.trim().length > 0) {
+			if (confirm('\nRemove all the annotations from this page?')) {
+				const num = page.getAttribute('data-page-number');
+				annoLayer.innerHTML = '';
+				removeFromStorage(num);
+			}
+		}
+	}
+
+	function removeFromStorage(num) {
+		const clearedPageNum = parseInt(num, 10);
+		const storedArray = JSON.parse(localStorage.getItem(`${RENDER_OPTIONS.documentId}/annotations`));
+		const newArray = JSON.stringify(storedArray.filter((o) => o.page !== clearedPageNum));
+		localStorage.setItem(`${RENDER_OPTIONS.documentId}/annotations`, newArray);
+	}
+
+	document.querySelector('.toolbar .page-clear').addEventListener('click', handlePageClearClick);
 })();
 
 // Comment stuff -- triggered by 'point' button

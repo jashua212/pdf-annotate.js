@@ -320,8 +320,8 @@ export function getAnnotationRect(el, svg) {
 export function scaleUp(svg, rect) {
 	let result = {};
 	let { viewport } = getMetadata(svg);
-	console.log('svg: ', svg);
-	console.log('typeof viewport.scale: ', typeof viewport.scale);
+	/* console.log('svg: ', svg);
+	console.log('typeof viewport.scale: ', typeof viewport.scale); */
 
 	Object.keys(rect).forEach((key) => {
 		result[key] = rect[key] * viewport.scale;

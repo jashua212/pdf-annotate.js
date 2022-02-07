@@ -9,10 +9,17 @@ import {
 
 let _enabled = false;
 let input;
-let _textSize;
+let viewerRectTop = document.getElementById('viewer').getBoundingClientRect().top;
+console.log('viewerRectTop: ', viewerRectTop);
+
+// since I've disabled the toolbar button to give user the ability to set
+// the variable for '_textSize', am locking it in here
+let _textSize = '12';
+let _fontFamily = 'Times new roman';
+
+// textColor variable will be set depending on which toolbar button is clicked
+// see enableText(type) below
 let _textColor;
-/* let viewerRectTop = document.getElementById('viewer').getBoundingClientRect().top;
-console.log('viewerRectTop: ', viewerRectTop); */
 
 /**
  * Handle document.mouseup event
@@ -28,16 +35,34 @@ function handleDocumentMouseup(e) {
 	input.setAttribute('id', 'pdf-annotate-text-input');
 	input.setAttribute('type', 'text');
 	input.setAttribute('placeholder', 'Enter text');
-	input.style.border = `3px solid ${BORDER_COLOR}`;
+	input.style.border = `3px solid ${_utils__WEBPACK_IMPORTED_MODULE_2__.BORDER_COLOR}`;
 	input.style.borderRadius = '3px';
 	input.style.position = 'absolute';
-	input.style.top = `${e.clientY}px`;
-	input.style.left = `${e.clientX}px`;
-	input.style.fontSize = `${_textSize}px`;
 
+	// adjust input so that it resembles what will be saved as an svg
+	// also, need to add in parent elm's scrollLeft since getBoundingClientRect()
+	// only get position relative to viewport and thus leaves out parent's scroll --
+	// this attempt commented out below is not good enough -- something's missing
+	/* const relevantScrollParent = document.querySelector('.well');
+	const scrollLeft = parseInt(relevantScrollParent.scrollLeft, 10);
+	console.log('scrollLeft: ', scrollLeft);
+	const relevantOffsetParent = document.querySelector('#main');
+	const offsetLeft = parseInt(relevantOffsetParent.offsetLeft, 10);
+	console.log('offsetLeft: ', offsetLeft); */
+
+	input.style.top = `${e.clientY - 8}px`;
+	input.style.left = `${e.clientX - 4}px`;
+	input.style.fontFamily = `${_fontFamily}`;
+	input.style.color = `${_textColor}`;
+	input.style.lineHeight = '1.2';
+	input.style.fontSize = '18px';
+	input.style.backgroundColor = 'transparent';
+
+	// add event listeners
 	input.addEventListener('blur', handleInputBlur);
 	input.addEventListener('keyup', handleInputKeyup);
 
+	// append input to body and put focus on it
 	document.body.appendChild(input);
 	input.focus();
 }
@@ -73,6 +98,7 @@ function saveText() {
 		if (!svg) {
 			return;
 		}
+		console.log('svg: ', svg);
 
 		let {
 			documentId,
@@ -127,7 +153,11 @@ export function setText(textSize = 12, textColor = '000000') {
 /**
  * Enable text behavior
  */
-export function enableText() {
+export function enableText(type) {
+	// I added this line so that textColor is set depending on which
+	// toolbar button is clicked
+	_textColor = /blue/.test(type) ? '#00f' : '#f00';
+
 	if (_enabled) {
 		return;
 	}
