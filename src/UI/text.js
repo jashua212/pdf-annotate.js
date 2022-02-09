@@ -22,7 +22,9 @@ let _fontFamily = 'Times new roman';
 let _textColor;
 
 // set y-scroll variables
+let initialInputX = 0;
 let initialInputY = 0;
+let initialScrollElmX = 0;
 let initialScrollElmY = 0;
 let scrollElm = document.querySelector('#viewer');
 
@@ -74,7 +76,9 @@ function handleDocumentMouseup(e) {
 	// MINE: add scroll event listener on scroll element, which is #viewer
 	/* console.log('parent scroll top: ', scrollElm.scrollTop);
 	console.log('parent offset top: ', scrollElm.getBoundingClientRect().top); */
+	initialInputX = parseInt(input.style.left, 10);
 	initialInputY = parseInt(input.style.top, 10);
+	initialScrollElmX = scrollElm.scrollLeft;
 	initialScrollElmY = scrollElm.scrollTop;
 	scrollElm.addEventListener('scroll', handleParentScroll, { passive: true });
 }
@@ -84,7 +88,9 @@ function handleDocumentMouseup(e) {
  */
 function handleParentScroll(e) {
 	let deltaY = scrollElm.scrollTop - initialScrollElmY;
+	let deltaX = scrollElm.scrollLeft - initialScrollElmX;
 	input.style.top = `${initialInputY - deltaY}px`;
+	input.style.left = `${initialInputX - deltaX}px`;
 }
 
 /**
