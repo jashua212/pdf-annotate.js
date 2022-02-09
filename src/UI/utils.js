@@ -109,8 +109,8 @@ export function pointIntersectsRect(x, y, rect) {
 
 
 // MINE
-export function getScrolledOffsetAnnotationRect(el, svg) {
-	let rect = getAnnotationRect(el, svg);
+export function getScrolledOffsetAnnotationRect(el) {
+	let rect = getAnnotationRect(el);
 
 	let {
 		offsetLeft,

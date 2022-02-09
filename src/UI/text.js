@@ -12,14 +12,19 @@ let input;
 let viewerRectTop = document.getElementById('viewer').getBoundingClientRect().top;
 console.log('viewerRectTop: ', viewerRectTop);
 
-// since I've disabled the toolbar button to give user the ability to set
+// since I've disabled the toolbar button that gives user the ability to set
 // the variable for '_textSize', am locking it in here
-let _textSize = '12';
+let _textSize = 12;
 let _fontFamily = 'Times new roman';
 
 // textColor variable will be set depending on which toolbar button is clicked
 // see enableText(type) below
 let _textColor;
+
+// set y-scroll variables
+let initialInputY = 0;
+let initialScrollElmY = 0;
+let scrollElm = document.querySelector('#viewer');
 
 /**
  * Handle document.mouseup event
@@ -65,6 +70,21 @@ function handleDocumentMouseup(e) {
 	// append input to body and put focus on it
 	document.body.appendChild(input);
 	input.focus();
+
+	// MINE: add scroll event listener on scroll element, which is #viewer
+	/* console.log('parent scroll top: ', scrollElm.scrollTop);
+	console.log('parent offset top: ', scrollElm.getBoundingClientRect().top); */
+	initialInputY = parseInt(input.style.top, 10);
+	initialScrollElmY = scrollElm.scrollTop;
+	scrollElm.addEventListener('scroll', handleParentScroll, { passive: true });
+}
+
+/**
+ * MINE: Handle parent.scroll event
+ */
+function handleParentScroll(e) {
+	let deltaY = scrollElm.scrollTop - initialScrollElmY;
+	input.style.top = `${initialInputY - deltaY}px`;
 }
 
 /**
@@ -137,6 +157,7 @@ function closeInput() {
 		document.body.removeChild(input);
 		input = null;
 	}
+	scrollElm.removeEventListener('scroll', handleParentScroll);
 }
 
 /**
