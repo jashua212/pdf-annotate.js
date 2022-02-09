@@ -38,6 +38,12 @@ function handleDocumentMouseup(e) {
 		return;
 	}
 
+	// bail if user click is actually in the toolbar
+	// this happens if the PDF is scrolled leftward
+	if (e.target.closest('.toolbar')) {
+		return;
+	}
+
 	input = document.createElement('input');
 	input.setAttribute('id', 'pdf-annotate-text-input');
 	input.setAttribute('type', 'text');
@@ -86,7 +92,7 @@ function handleDocumentMouseup(e) {
 /**
  * MINE: Handle parent.scroll event
  */
-function handleParentScroll(e) {
+function handleParentScroll() {
 	let deltaY = scrollElm.scrollTop - initialScrollElmY;
 	let deltaX = scrollElm.scrollLeft - initialScrollElmX;
 	input.style.top = `${initialInputY - deltaY}px`;
